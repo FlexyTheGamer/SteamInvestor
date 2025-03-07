@@ -18,9 +18,12 @@ namespace SteamInventoryAIR
 
             builder.UseMauiCommunityToolkit();
 
-#if DEBUG
-    		builder.Logging.AddDebug();
-#endif
+            //?????????????? Set LoginPage as the initial page ?????????
+            builder.Services.AddSingleton<LoginPage>();
+
+            //#if DEBUG
+            //    		builder.Logging.AddDebug();
+            //#endif
 
             return builder.Build();
         }

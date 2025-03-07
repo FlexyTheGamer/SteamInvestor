@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!--
+    
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="SteamInventoryAIR.LoginPage"
+             Title="LoginPage">
+    <VerticalStackLayout>
+        <Label 
+            Text="Welcome to .NET MAUI! U DOG!"
+            VerticalOptions="Center" 
+            HorizontalOptions="Center" />
+    </VerticalStackLayout>
+</ContentPage>
+    
+-->
+    
+    
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="SteamInventoryAIR.LoginPage"
+             BackgroundColor="White">
+    <VerticalStackLayout Padding="20" Spacing="15">
+        <!-- Logo Placeholder -->
+        <Image Source="placeholder_image.png" 
+               HeightRequest="100" 
+               HorizontalOptions="Center" />
+
+        <!-- Username Entry -->
+        <Entry x:Name="UsernameEntry"
+               Placeholder="Username"
+               Keyboard="Text"
+               FontSize="18"
+               BackgroundColor="#f2f2f2"
+               TextColor="Black"
+               Margin="0,10,0,0" />
+
+        <!-- Password Entry -->
+        <Entry x:Name="PasswordEntry"
+               Placeholder="Password"
+               IsPassword="True"
+               FontSize="18"
+               BackgroundColor="#f2f2f2"
+               TextColor="Black" />
+
+        <!-- Optional Authorization Code -->
+        <Entry x:Name="AuthCodeEntry"
+               Placeholder="Authorization Code (Optional)"
+               FontSize="18"
+               BackgroundColor="#f2f2f2"
+               TextColor="Black" />
+
+        <!-- Login Button -->
+        <Button x:Name="LoginButton"
+                Text="Login"
+                FontSize="20"
+                BackgroundColor="#0078d7"
+                TextColor="White"
+                CornerRadius="10"
+                Clicked="OnLoginButtonClicked" />
+
+        <!-- Navigation Buttons -->
+        <HorizontalStackLayout HorizontalOptions="Center" Spacing="10">
+            <Button Text="Steam login" FontSize="14" />
+            <Button Text="Web Session" FontSize="14" />
+            <Button Text="QR Code" FontSize="14" />
+        </HorizontalStackLayout>
+    </VerticalStackLayout>
+</ContentPage>
