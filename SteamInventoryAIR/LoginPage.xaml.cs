@@ -4,25 +4,168 @@ using Microsoft.Maui.Controls;
 
 public partial class LoginPage : ContentPage
 {
-	public LoginPage()
-	{
-		InitializeComponent();
-	}
+    public LoginPage()
+    {
+        InitializeComponent(); //x:Class value must match your namespace and class name exactly.
 
+        // Set default login method
+        SwitchLoginMethod(LoginMethod.Traditional);
+    }
+
+    // Track current login method
+    private enum LoginMethod
+    {
+        Traditional,
+        SessionKey,
+        QRCode
+    }
+
+    private LoginMethod _currentMethod = LoginMethod.Traditional;
+
+    private void SwitchLoginMethod(LoginMethod method)
+    {
+        // Hide all templates first
+        TraditionalLoginTemplate.IsVisible = false;
+        SessionKeyLoginTemplate.IsVisible = false;
+        QRCodeLoginTemplate.IsVisible = false;
+
+        // Show the selected template
+        switch (method)
+        {
+            case LoginMethod.Traditional:
+                TraditionalLoginTemplate.IsVisible = true;
+                break;
+            case LoginMethod.SessionKey:
+                SessionKeyLoginTemplate.IsVisible = true;
+                break;
+            case LoginMethod.QRCode:
+                QRCodeLoginTemplate.IsVisible = true;
+                // Generate QR code when this method is selected
+                GenerateQRCode();
+                break;
+        }
+
+        _currentMethod = method;
+
+        // Update button states to show which is selected
+
+        //Old Ver
+        //SteamLoginButton.BackgroundColor = method == LoginMethod.Traditional
+        //    ? Colors.LightBlue : Colors.Gray;
+        //WebSessionButton.BackgroundColor = method == LoginMethod.SessionKey
+        //    ? Colors.LightBlue : Colors.Gray;
+        //QRCodeButton.BackgroundColor = method == LoginMethod.QRCode
+        //    ? Colors.LightBlue : Colors.Gray;
+
+        //New Ver
+        SteamLoginButton.BackgroundColor = method == LoginMethod.Traditional
+            ? Color.FromArgb("#CC2424") : Color.FromArgb("#2A2E35");
+        SteamLoginButton.TextColor = method == LoginMethod.Traditional
+            ? Colors.White : Color.FromArgb("#CCCCCC");
+
+        WebSessionButton.BackgroundColor = method == LoginMethod.SessionKey
+            ? Color.FromArgb("#CC2424") : Color.FromArgb("#2A2E35");
+        WebSessionButton.TextColor = method == LoginMethod.SessionKey
+            ? Colors.White : Color.FromArgb("#CCCCCC");
+
+        QRCodeButton.BackgroundColor = method == LoginMethod.QRCode
+            ? Color.FromArgb("#CC2424") : Color.FromArgb("#2A2E35");
+        QRCodeButton.TextColor = method == LoginMethod.QRCode
+            ? Colors.White : Color.FromArgb("#CCCCCC");
+    }
+
+    // Button click handlers for switching login methods
+    private void OnSteamLoginClicked(object sender, EventArgs e)
+    {
+        SwitchLoginMethod(LoginMethod.Traditional);
+    }
+
+    private void OnWebSessionClicked(object sender, EventArgs e)
+    {
+        SwitchLoginMethod(LoginMethod.SessionKey);
+    }
+
+    private void OnQRCodeClicked(object sender, EventArgs e)
+    {
+        SwitchLoginMethod(LoginMethod.QRCode);
+    }
+
+    // Login button handlers
     private async void OnLoginButtonClicked(object sender, EventArgs e)
     {
-        string username = UsernameEntry.Text;
-        string password = PasswordEntry.Text;
-        string authCode = AuthCodeEntry.Text;
-
-        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+        if (string.IsNullOrEmpty(UsernameEntry.Text) || string.IsNullOrEmpty(PasswordEntry.Text))
         {
-            await DisplayAlert("Error", "Please enter both username and password.", "OK");
+            await DisplayAlert("Error", "Username and password are required", "OK");
             return;
         }
 
-        await DisplayAlert("Success", $"Logging in with {username}", "OK");
+        // Here you would implement the actual Steam login logic using SteamKit2
+        // For now, we'll just show a success message and navigate to the main page
+        await DisplayAlert("Login", $"Logging in with username: {UsernameEntry.Text}", "OK");
+        await Shell.Current.GoToAsync("///MainPage");
     }
+
+    private async void OnSessionKeyLoginClicked(object sender, EventArgs e)
+    {
+        if (string.IsNullOrEmpty(SessionKeyEntry.Text))
+        {
+            await DisplayAlert("Error", "Session key is required", "OK");
+            return;
+        }
+
+        // Here you would implement the actual session key login logic
+        // For now, we'll just show a success message and navigate to the main page
+        await DisplayAlert("Login", "Logging in with session key", "OK");
+        await Shell.Current.GoToAsync("///MainPage");
+    }
+
+    private async void OnQRLoginClicked(object sender, EventArgs e)
+    {
+        // This would be triggered after QR code is scanned
+        // For now, we'll just show a message and navigate to the main page
+        await DisplayAlert("QR Login", "QR login successful", "OK");
+        await Shell.Current.GoToAsync("///MainPage");
+    }
+
+    private async void OnHelpButtonClicked(object sender, EventArgs e)
+    {
+        await DisplayAlert("Steam Session Key Help",
+            "To find your Steam session key:\n\n" +
+            "1. Log into Steam in your browser\n" +
+            "2. Press F12 to open Developer Tools\n" +
+            "3. Go to Application tab > Cookies > https://steamcommunity.com\n" +
+            "4. Find the 'sessionid' cookie and copy its value",
+            "OK");
+    }
+
+    private async void OnPasteSessionKeyClicked(object sender, EventArgs e)
+    {
+        string clipboardText = await Clipboard.GetTextAsync();
+        if (!string.IsNullOrEmpty(clipboardText))
+        {
+            SessionKeyEntry.Text = clipboardText;
+        }
+    }
+
+    private async void OnScanQRCodeClicked(object sender, EventArgs e)
+    {
+        // Implement camera scanning functionality
+        // This would require a camera plugin
+        await DisplayAlert("Scan QR", "Camera functionality will be implemented later", "OK");
+    }
+
+    private void GenerateQRCode()
+    {
+        // In a real implementation, you would:
+        // 1. Call Steam API to generate a login token
+        // 2. Create a QR code from that token
+        // 3. Display it in the QRCodeImage
+
+        // For now, we'll just use a placeholder
+        QRCodeImage.Source = "qr_code_placeholder.png";
+    }
+
+
 
 
 }

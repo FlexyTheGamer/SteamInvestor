@@ -1,70 +1,219 @@
 <?xml version="1.0" encoding="utf-8" ?>
 
+
 <!--
-    
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="SteamInventoryAIR.LoginPage"
-             Title="LoginPage">
-    <VerticalStackLayout>
-        <Label 
-            Text="Welcome to .NET MAUI! U DOG!"
-            VerticalOptions="Center" 
-            HorizontalOptions="Center" />
-    </VerticalStackLayout>
-</ContentPage>
-    
+Ctrl + K then Ctrl + C : Comments selected lines 
 -->
-    
-    
+
+<!--!!!!!!!!!!!!!!! x:Class value must match your namespace and class name exactly. -->
+<!--
+    <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="SteamInventoryAIR.LoginPage"
+             Title="Login">
+
+    <Grid RowDefinitions="Auto,*,Auto" Padding="20">
+        --><!-- Logo/Header --><!--
+        <Image Grid.Row="0" 
+               Source="steam_investor_logo.png"
+               HeightRequest="150"
+               HorizontalOptions="Center"
+               Margin="0,40,0,20"/>
+
+        --><!-- Login Content (will change based on selected login type) --><!--
+        <Grid Grid.Row="1" x:Name="LoginContentGrid">
+            --><!-- Content will be dynamically loaded here -->
+
+            <!-- Traditional Login Template --><!--
+            <Grid x:Name="TraditionalLoginTemplate" IsVisible="false">
+                <StackLayout Spacing="15" VerticalOptions="Center">
+                    <Entry Placeholder="Username" x:Name="UsernameEntry"/>
+                    <Entry Placeholder="Password" IsPassword="True" x:Name="PasswordEntry"/>
+                    <Entry Placeholder="Authorization Code (Optional)" x:Name="AuthCodeEntry"/>
+                    <Button Text="Login" Clicked="OnLoginButtonClicked" 
+                HorizontalOptions="Center" WidthRequest="200"/>
+                </StackLayout>
+            </Grid>
+
+            --><!-- Session Key Login Template --><!--
+            <Grid x:Name="SessionKeyLoginTemplate" IsVisible="false">
+                <StackLayout Spacing="15" VerticalOptions="Center">
+                    <Button Text="Where can I find my Steam Session key?" 
+                Clicked="OnHelpButtonClicked"
+                BackgroundColor="Transparent"
+                TextColor="Black"/>
+                    <Entry Placeholder="Steam Session Key" x:Name="SessionKeyEntry"/>
+                    <Button ImageSource="clipboard_icon.png" 
+                Clicked="OnPasteSessionKeyClicked"
+                HorizontalOptions="Center" 
+                WidthRequest="200"/>
+                    <Button Text="Login" Clicked="OnSessionKeyLoginClicked" 
+                HorizontalOptions="Center" WidthRequest="200"/>
+                </StackLayout>
+            </Grid>
+
+            --><!-- QR Code Login Template --><!--
+            <Grid x:Name="QRCodeLoginTemplate" IsVisible="false">
+                <StackLayout Spacing="15" VerticalOptions="Center">
+                    <Image Source="qr_code_placeholder.png" 
+               HeightRequest="200" 
+               WidthRequest="200"
+               HorizontalOptions="Center"
+               x:Name="QRCodeImage"/>
+                    <Button ImageSource="camera_icon.png" 
+                Clicked="OnScanQRCodeClicked"
+                HorizontalOptions="Center" 
+                WidthRequest="200"/>
+                    <Button Text="Login" Clicked="OnQRLoginClicked" 
+                HorizontalOptions="Center" WidthRequest="200"/>
+                </StackLayout>
+            </Grid>
+
+
+        </Grid>
+
+        --><!-- Login Type Selector --><!--
+        <Grid Grid.Row="2" ColumnDefinitions="*,*,*">
+            <Button Grid.Column="0" 
+                    Text="Steam login" 
+                    x:Name="SteamLoginButton"
+                    Clicked="OnSteamLoginClicked"/>
+
+            <Button Grid.Column="1" 
+                    Text="Web Session" 
+                    x:Name="WebSessionButton"
+                    Clicked="OnWebSessionClicked"/>
+
+            <Button Grid.Column="2" 
+                    Text="QR Code" 
+                    x:Name="QRCodeButton"
+                    Clicked="OnQRCodeClicked"/>
+        </Grid>
+    </Grid>
+</ContentPage>
+-->
+
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="SteamInventoryAIR.LoginPage"
-             BackgroundColor="White">
-    <VerticalStackLayout Padding="20" Spacing="15">
-        <!-- Logo Placeholder -->
-        <Image Source="placeholder_image.png" 
-               HeightRequest="100" 
-               HorizontalOptions="Center" />
+             Title="Login"
+             BackgroundColor="#171A21">
 
-        <!-- Username Entry -->
-        <Entry x:Name="UsernameEntry"
-               Placeholder="Username"
-               Keyboard="Text"
-               FontSize="18"
-               BackgroundColor="#f2f2f2"
-               TextColor="Black"
-               Margin="0,10,0,0" />
+    <!-- Define resources for consistent styling -->
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <!-- Button style -->
+            <Style x:Key="LoginButtonStyle" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="#CC2424" />
+                <Setter Property="TextColor" Value="White" />
+                <Setter Property="FontAttributes" Value="Bold" />
+                <Setter Property="CornerRadius" Value="4" />
+                <Setter Property="WidthRequest" Value="200" />
+                <Setter Property="HorizontalOptions" Value="Center" />
+                <Setter Property="Margin" Value="0,10,0,0" />
+            </Style>
 
-        <!-- Password Entry -->
-        <Entry x:Name="PasswordEntry"
-               Placeholder="Password"
-               IsPassword="True"
-               FontSize="18"
-               BackgroundColor="#f2f2f2"
-               TextColor="Black" />
+            <!-- Tab button style -->
+            <Style x:Key="TabButtonStyle" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="#2A2E35" />
+                <Setter Property="TextColor" Value="#CCCCCC" />
+                <Setter Property="CornerRadius" Value="0" />
+                <Setter Property="Margin" Value="1" />
+            </Style>
 
-        <!-- Optional Authorization Code -->
-        <Entry x:Name="AuthCodeEntry"
-               Placeholder="Authorization Code (Optional)"
-               FontSize="18"
-               BackgroundColor="#f2f2f2"
-               TextColor="Black" />
+            <!-- Entry style -->
+            <Style x:Key="EntryStyle" TargetType="Entry">
+                <Setter Property="BackgroundColor" Value="#32353C" />
+                <Setter Property="TextColor" Value="White" />
+                <Setter Property="PlaceholderColor" Value="#AAAAAA" />
+                <Setter Property="Margin" Value="0,5,0,5" />
+            </Style>
+        </ResourceDictionary>
+    </ContentPage.Resources>
 
-        <!-- Login Button -->
-        <Button x:Name="LoginButton"
-                Text="Login"
-                FontSize="20"
-                BackgroundColor="#0078d7"
-                TextColor="White"
-                CornerRadius="10"
-                Clicked="OnLoginButtonClicked" />
+    <Grid RowDefinitions="Auto,*,Auto" Padding="20">
+        <!-- Logo/Header -->
+        <Image Grid.Row="0" 
+               Source="login_page_logo.png"
+               HeightRequest="150"
+               HorizontalOptions="Center"
+               Margin="0,40,0,20"/>
 
-        <!-- Navigation Buttons -->
-        <HorizontalStackLayout HorizontalOptions="Center" Spacing="10">
-            <Button Text="Steam login" FontSize="14" />
-            <Button Text="Web Session" FontSize="14" />
-            <Button Text="QR Code" FontSize="14" />
-        </HorizontalStackLayout>
-    </VerticalStackLayout>
+        <!-- Login Content Area -->
+        <Grid Grid.Row="1" x:Name="LoginContentGrid">
+            <!-- Traditional Login Template -->
+            <Grid x:Name="TraditionalLoginTemplate" IsVisible="false">
+                <StackLayout Spacing="15" VerticalOptions="Center">
+                    <Entry Placeholder="Username" x:Name="UsernameEntry" Style="{StaticResource EntryStyle}"/>
+                    <Entry Placeholder="Password" IsPassword="True" x:Name="PasswordEntry" Style="{StaticResource EntryStyle}"/>
+                    <Entry Placeholder="Authorization Code (Optional)" x:Name="AuthCodeEntry" Style="{StaticResource EntryStyle}"/>
+                    <Button Text="Login" Clicked="OnLoginButtonClicked" Style="{StaticResource LoginButtonStyle}"/>
+                </StackLayout>
+            </Grid>
+
+            <!-- Session Key Login Template -->
+            <Grid x:Name="SessionKeyLoginTemplate" IsVisible="false">
+                <StackLayout Spacing="15" VerticalOptions="Center">
+                    <Button Text="Where can I find my Steam Session key?" 
+                            Clicked="OnHelpButtonClicked"
+                            BackgroundColor="Transparent"
+                            TextColor="#66C0F4"
+                            FontSize="14"
+                            HorizontalOptions="Center"/>
+                    <Entry Placeholder="Steam Session Key" x:Name="SessionKeyEntry" Style="{StaticResource EntryStyle}"/>
+                    <Frame BackgroundColor="#32353C" CornerRadius="4" Padding="10" HorizontalOptions="Center">
+                        <ImageButton Source="clipboard_icon.png" 
+                                    Clicked="OnPasteSessionKeyClicked"
+                                    BackgroundColor="Transparent"
+                                    HeightRequest="30"
+                                    WidthRequest="30"/>
+                    </Frame>
+                    <Button Text="Login" Clicked="OnSessionKeyLoginClicked" Style="{StaticResource LoginButtonStyle}"/>
+                </StackLayout>
+            </Grid>
+
+            <!-- QR Code Login Template -->
+            <Grid x:Name="QRCodeLoginTemplate" IsVisible="false">
+                <StackLayout Spacing="15" VerticalOptions="Center">
+                    <Frame BackgroundColor="White" CornerRadius="8" Padding="10" HorizontalOptions="Center">
+                        <Image Source="qr_code_placeholder.png" 
+                               HeightRequest="200" 
+                               WidthRequest="200"
+                               HorizontalOptions="Center"
+                               x:Name="QRCodeImage"/>
+                    </Frame>
+                    <Frame BackgroundColor="#32353C" CornerRadius="4" Padding="10" HorizontalOptions="Center" Margin="0,10,0,0">
+                        <ImageButton Source="camera_icon.png" 
+                                    Clicked="OnScanQRCodeClicked"
+                                    BackgroundColor="Transparent"
+                                    HeightRequest="30"
+                                    WidthRequest="30"/>
+                    </Frame>
+                    <Button Text="Login" Clicked="OnQRLoginClicked" Style="{StaticResource LoginButtonStyle}"/>
+                </StackLayout>
+            </Grid>
+        </Grid>
+
+        <!-- Login Type Selector -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,*,*" Margin="0,20,0,0">
+            <Button Grid.Column="0" 
+                    Text="Steam login" 
+                    x:Name="SteamLoginButton"
+                    Clicked="OnSteamLoginClicked"
+                    Style="{StaticResource TabButtonStyle}"/>
+
+            <Button Grid.Column="1" 
+                    Text="Web Session" 
+                    x:Name="WebSessionButton"
+                    Clicked="OnWebSessionClicked"
+                    Style="{StaticResource TabButtonStyle}"/>
+
+            <Button Grid.Column="2" 
+                    Text="QR Code" 
+                    x:Name="QRCodeButton"
+                    Clicked="OnQRCodeClicked"
+                    Style="{StaticResource TabButtonStyle}"/>
+        </Grid>
+    </Grid>
 </ContentPage>
+
