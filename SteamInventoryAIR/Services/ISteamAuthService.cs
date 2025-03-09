@@ -8,7 +8,7 @@ namespace SteamInventoryAIR.Services
 {
     internal interface ISteamAuthService
     {
-        Task<bool> LoginWithCredentialsAsync(string username, string password, string authCode = null);
+        Task<bool> LoginWithCredentialsAsync(string username, string password, string? authCode = null);
         Task<bool> LoginWithSessionKeyAsync(string sessionKey);
         Task<bool> LoginWithQRCodeAsync(string qrToken);
         Task<string> GenerateQRCodeTokenAsync();

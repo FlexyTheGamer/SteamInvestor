@@ -9,38 +9,38 @@ namespace SteamInventoryAIR.ViewModels
         private readonly ISteamAuthService _authService;
 
         // Properties for traditional login
-        private string _username;
-        public string Username
+        private string? _username;
+        public string? Username
         {
             get => _username;
             set => SetProperty(ref _username, value);
         }
 
-        private string _password;
-        public string Password
+        private string? _password;
+        public string? Password
         {
             get => _password;
             set => SetProperty(ref _password, value);
         }
 
-        private string _authCode;
-        public string AuthCode
+        private string? _authCode;
+        public string? AuthCode
         {
             get => _authCode;
             set => SetProperty(ref _authCode, value);
         }
 
         // Property for session key login
-        private string _sessionKey;
-        public string SessionKey
+        private string? _sessionKey;
+        public string? SessionKey
         {
             get => _sessionKey;
             set => SetProperty(ref _sessionKey, value);
         }
 
         // Property for QR code login
-        private string _qrCodeUrl;
-        public string QrCodeUrl
+        private string? _qrCodeUrl;
+        public string? QrCodeUrl
         {
             get => _qrCodeUrl;
             set => SetProperty(ref _qrCodeUrl, value);
@@ -74,7 +74,7 @@ namespace SteamInventoryAIR.ViewModels
             try
             {
                 IsBusy = true;
-                bool success = await _authService.LoginWithCredentialsAsync(Username, Password, AuthCode);
+                bool success = await _authService.LoginWithCredentialsAsync(Username, Password, AuthCode); //! -> null-forgiving operator (!) if you're certain the value won't cause issues
 
                 if (success)
                 {
