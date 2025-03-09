@@ -1,10 +1,10 @@
 using System.Windows.Input;
-using SteamInventoryAIR.Services;
 using System.Diagnostics;
+using SteamInventoryAIR.Interfaces;
 
 namespace SteamInventoryAIR.ViewModels
 {
-    internal class LoginViewModel : BaseViewModel   //Changed Public -> Internal (because of an error)
+    public class LoginViewModel : BaseViewModel   //Changed Public -> Internal (because of an error)
     {
         private readonly ISteamAuthService _authService;
 

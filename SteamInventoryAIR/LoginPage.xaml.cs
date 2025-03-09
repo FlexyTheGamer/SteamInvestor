@@ -3,8 +3,6 @@ namespace SteamInventoryAIR;
 using Microsoft.Maui.Controls;
 
 using SteamInventoryAIR.ViewModels;
-using SteamInventoryAIR.Services;
-
 public partial class LoginPage : ContentPage
 {
     private readonly LoginViewModel _viewModel;
@@ -19,7 +17,7 @@ public partial class LoginPage : ContentPage
 
     private LoginMethod _currentMethod = LoginMethod.Traditional;
 
-    internal LoginPage(LoginViewModel viewModel)    //Changed Public -> Internal (because of an error)     (argument -> part of add for MVVM Architecture)
+    public LoginPage(LoginViewModel viewModel)    //Changed Public -> Internal (because of an error)     (argument -> part of add for MVVM Architecture)
     {
         InitializeComponent(); //x:Class value must match your namespace and class name exactly.
 

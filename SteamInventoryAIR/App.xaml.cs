@@ -4,7 +4,7 @@ namespace SteamInventoryAIR
 {
     public partial class App : Application
     {
-        public App()
+        public App(IServiceProvider serviceProvider)
         {
             InitializeComponent();
 
@@ -18,10 +18,9 @@ namespace SteamInventoryAIR
             //Added for MVVM Architecture
             Routing.RegisterRoute(nameof(MainPage), typeof(MainPage));
 
-            MainPage = new NavigationPage(new MainPage
-            {
-                BindingContext = new BaseViewModel()
-            });
+            MainPage = new NavigationPage(new LoginPage(
+                serviceProvider.GetService<LoginViewModel>()
+            ));
         }
     }
 }

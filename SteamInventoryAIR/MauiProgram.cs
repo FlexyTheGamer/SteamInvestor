@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
+using SteamInventoryAIR.Interfaces;
 using SteamInventoryAIR.Services;
 using SteamInventoryAIR.ViewModels;
 
@@ -20,19 +21,14 @@ namespace SteamInventoryAIR
 
             builder.UseMauiCommunityToolkit();
 
-
-            //?????????????? Set LoginPage as the initial page ????????? - Probabbly defines some sort of service object for the form
-            builder.Services.AddSingleton<LoginPage>();
-
             // Register services
-            //builder.Services.AddSingleton<ISteamAuthService, SteamAuthService>();
+            builder.Services.AddSingleton<ISteamAuthService, SteamAuthService>();
 
             // Register ViewModels
             builder.Services.AddTransient<LoginViewModel>();
 
             // Register Pages
             builder.Services.AddTransient<LoginPage>();
-
 
             //#if DEBUG
             //    		builder.Logging.AddDebug();

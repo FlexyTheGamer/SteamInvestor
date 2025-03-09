@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SteamInventoryAIR.Services
+namespace SteamInventoryAIR.Interfaces
 {
-    internal interface ISteamAuthService
+    public interface ISteamAuthService
     {
         Task<bool> LoginWithCredentialsAsync(string username, string password, string? authCode = null);
         Task<bool> LoginWithSessionKeyAsync(string sessionKey);
