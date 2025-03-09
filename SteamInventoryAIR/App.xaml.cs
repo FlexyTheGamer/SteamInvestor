@@ -1,4 +1,6 @@
-﻿namespace SteamInventoryAIR
+﻿using SteamInventoryAIR.ViewModels;
+
+namespace SteamInventoryAIR
 {
     public partial class App : Application
     {
@@ -15,6 +17,11 @@
 
             //Added for MVVM Architecture
             Routing.RegisterRoute(nameof(MainPage), typeof(MainPage));
+
+            MainPage = new NavigationPage(new MainPage
+            {
+                BindingContext = new BaseViewModel()
+            });
         }
     }
 }
