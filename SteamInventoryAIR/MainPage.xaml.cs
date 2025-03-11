@@ -54,7 +54,7 @@ namespace SteamInventoryAIR
         }
 
 
-        private void ConnectToSteam()
+        private void ConnectToSteam()   //eqivalent to RunCallBacks() from SteamAuthService.cs
         {
             steamClient.Connect();
 

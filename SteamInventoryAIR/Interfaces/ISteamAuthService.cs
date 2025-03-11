@@ -14,5 +14,10 @@ namespace SteamInventoryAIR.Interfaces
         Task<string> GenerateQRCodeTokenAsync();
         Task<bool> IsLoggedInAsync();
         Task LogoutAsync();
+
+        Task<string> GetPersonaNameAsync();
+
+        Task<bool> SubmitTwoFactorCodeAsync(string twoFactorCode);
+
     }
 }

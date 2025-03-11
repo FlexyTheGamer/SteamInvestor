@@ -69,6 +69,7 @@ Ctrl + K then Ctrl + C : Comments selected lines
 
             <!--Traditional Login Template - MVVM Ver - uses data binding -->
             <Grid x:Name="TraditionalLoginTemplate" IsVisible="false">
+
                 <StackLayout Spacing="15" VerticalOptions="Center">
                     <Entry Placeholder="Username" Text="{Binding Username}" Style="{StaticResource EntryStyle}"/>
                     <Entry Placeholder="Password" IsPassword="True" Text="{Binding Password}" Style="{StaticResource EntryStyle}"/>
@@ -102,6 +103,7 @@ Ctrl + K then Ctrl + C : Comments selected lines
 
             <!-- Session Key Login Template - MVVM Ver - uses data binding -->
             <Grid x:Name="SessionKeyLoginTemplate" IsVisible="false">
+
                 <StackLayout Spacing="15" VerticalOptions="Center">
                     <Button Text="Where can I find my Steam Session key?" 
                             Clicked="OnHelpButtonClicked"
@@ -146,6 +148,7 @@ Ctrl + K then Ctrl + C : Comments selected lines
 
             <!-- QR Code Login Template - MVVM Ver - uses data binding -->
             <Grid x:Name="QRCodeLoginTemplate" IsVisible="false">
+
                 <StackLayout Spacing="15" VerticalOptions="Center">
                     <Frame BackgroundColor="White" CornerRadius="8" Padding="10" HorizontalOptions="Center">
                         <Image Source="{Binding QrCodeUrl, TargetNullValue='qr_code_placeholder.png'}" 
@@ -163,7 +166,7 @@ Ctrl + K then Ctrl + C : Comments selected lines
                     <Button Text="Login" Command="{Binding QrCodeLoginCommand}" Style="{StaticResource LoginButtonStyle}"/>
                 </StackLayout>
             </Grid>
-            
+
         </Grid>
 
 
@@ -187,6 +190,17 @@ Ctrl + K then Ctrl + C : Comments selected lines
                     Clicked="OnQRCodeClicked"
                     Style="{StaticResource TabButtonStyle}"/>
         </Grid>
+
+
+        <Label Text="{Binding LoginStatus}" 
+       TextColor="{Binding LoginStatus, Converter={StaticResource LoginStatusColorConverter}}"
+       HorizontalOptions="Center"
+       Margin="0,10,0,0"
+       IsVisible="{Binding LoginStatus, Converter={StaticResource StringNotEmptyConverter}}"/>
+        
+
     </Grid>
+
+
 </ContentPage>
 

@@ -46,6 +46,23 @@ namespace SteamInventoryAIR.ViewModels
             set => SetProperty(ref _qrCodeUrl, value);
         }
 
+        //Temperorarly? for testing login success
+        private string _loginStatus;
+        public string LoginStatus
+        {
+            get => _loginStatus;
+            set => SetProperty(ref _loginStatus, value);
+        }
+
+        private string _profileName;
+        public string ProfileName
+        {
+            get => _profileName;
+            set => SetProperty(ref _profileName, value);
+        }
+
+
+
         // Commands for login actions
         public ICommand TraditionalLoginCommand { get; }
         public ICommand SessionKeyLoginCommand { get; }
@@ -74,20 +91,32 @@ namespace SteamInventoryAIR.ViewModels
             try
             {
                 IsBusy = true;
-                bool success = await _authService.LoginWithCredentialsAsync(Username, Password, AuthCode); //! -> null-forgiving operator (!) if you're certain the value won't cause issues
+                LoginStatus = "Logging in...";
+
+                bool success = await _authService.LoginWithCredentialsAsync(Username, Password, AuthCode);
 
                 if (success)
                 {
-                    // Navigate to main page or trigger navigation event
-                    // For now, we'll just reset the form
+                    // Get the actual Steam profile name
+                    string profileName = await _authService.GetPersonaNameAsync();
+                    LoginStatus = $"Successfully logged in as {profileName}";
+
+                    // Reset form fields
                     Username = string.Empty;
                     Password = string.Empty;
                     AuthCode = string.Empty;
+
+                    // TODO: Navigate to main page when ready
+                    // await Shell.Current.GoToAsync("///MainPage");
+                }
+                else
+                {
+                    LoginStatus = "Login failed. Please check your credentials.";
                 }
             }
             catch (Exception ex)
             {
-                // Handle exceptions
+                LoginStatus = $"Error: {ex.Message}";
                 Debug.WriteLine($"Login error: {ex.Message}");
             }
             finally
