@@ -4,6 +4,10 @@ using SteamInventoryAIR.Interfaces;
 using SteamInventoryAIR.Services;
 using SteamInventoryAIR.ViewModels;
 
+using System.Text.Json;
+using Microsoft.Maui.ApplicationModel;
+
+
 namespace SteamInventoryAIR
 {
     public static class MauiProgram

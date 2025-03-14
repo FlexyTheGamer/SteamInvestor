@@ -3,6 +3,9 @@ namespace SteamInventoryAIR;
 using Microsoft.Maui.Controls;
 
 using SteamInventoryAIR.ViewModels;
+
+using Microsoft.Maui.ApplicationModel;
+
 public partial class LoginPage : ContentPage
 {
     private readonly LoginViewModel _viewModel;
@@ -141,15 +144,21 @@ public partial class LoginPage : ContentPage
 
     private async void OnHelpButtonClicked(object sender, EventArgs e)
     {
-        await DisplayAlert("Steam Session Key Help",
-            "To find your Steam session key:\n\n" +
-            "1. Log into Steam in your browser\n" +
-            "2. Press F12 to open Developer Tools\n" +
-            "3. Go to Application tab > Cookies > https://steamcommunity.com\n" +
-            "4. Find the 'sessionid' cookie and copy its value",
-            "OK");
+        bool openBrowser = await DisplayAlert("Steam Session Key Help",
+                "To find your Steam session key:\n\n" +
+                "1. Click 'Open in Browser' to go to the Steam session key page\n" +
+                "2. Make sure you're logged into Steam in your browser\n" +
+                "3. Copy the entire JSON response or just the 'token' value\n" +
+                "4. Paste it back here to log in",
+                "Open in Browser", "Cancel");
+
+        if (openBrowser)
+        {
+            await Browser.OpenAsync(new Uri("https://steamcommunity.com/chat/clientjstoken"), BrowserLaunchMode.SystemPreferred);
+        }
     }
 
+    //This apprently has a better way to be implemented with ICommand - try it later if you have more time...
     private async void OnPasteSessionKeyClicked(object sender, EventArgs e)
     {
         string clipboardText = await Clipboard.GetTextAsync();

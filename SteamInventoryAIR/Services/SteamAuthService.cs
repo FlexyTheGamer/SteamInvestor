@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -27,14 +28,24 @@ namespace SteamInventoryAIR.Services
         private SteamID _steamId;
         private string _personaName;
 
+
         // TaskCompletionSource for login process
         private TaskCompletionSource<bool> _loginTcs;
+
+        // TaskCompletionSource for persona name retrieval
+        private TaskCompletionSource<string> _personaNameTcs;
+
 
         // Store current login credentials
         private string _currentUsername;
         private string _currentPassword;
 
         private string _previousGuardData;
+
+
+        //Login over session key variables
+        private string _sessionKey;
+        private bool _isSessionKeyLogin;
 
         public SteamAuthService()
         {
@@ -83,9 +94,128 @@ namespace SteamInventoryAIR.Services
             return await _loginTcs.Task;
         }
 
+        public async Task<bool> LoginWithSessionKeyAsync_OLD(string sessionKey)
+        {
+            _loginTcs = new TaskCompletionSource<bool>();
+
+            _personaNameTcs = new TaskCompletionSource<string>();
+
+            try
+            {
+                // Reset persona name
+                _personaName = null;
+
+
+                // Check if the input is a JSON string
+                if (sessionKey.Trim().StartsWith("{"))
+                {
+                    // Parse the JSON to extract the token
+                    var jsonResponse = System.Text.Json.JsonSerializer.Deserialize<SessionKeyResponse>(sessionKey);
+
+                    if (!jsonResponse.logged_in)
+                    {
+                        Debug.WriteLine("The provided session data indicates you're not logged in to Steam");
+                        _loginTcs.SetResult(false);
+                        return await _loginTcs.Task;
+                    }
+
+                    // Extract just the token part
+                    sessionKey = jsonResponse.token;
+
+                    // Store the Steam ID for later use
+                    _steamId = new SteamID(Convert.ToUInt64(jsonResponse.steamid));
+                    Debug.WriteLine($"Set Steam ID to: {_steamId}");
+
+                }
+
+                // Connect to Steam using the session key
+                _steamClient.Connect();
+
+                // The session key login will be handled in OnConnected
+                _sessionKey = sessionKey;
+                _isSessionKeyLogin = true;
+
+                return await _loginTcs.Task;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error logging in with session key: {ex.Message}");
+                _loginTcs.SetResult(false);
+                return false;
+            }
+        }
+        //old version above, new version below
         public async Task<bool> LoginWithSessionKeyAsync(string sessionKey)
         {
-            throw new NotImplementedException();
+            _loginTcs = new TaskCompletionSource<bool>();
+            _personaName = null; // Reset persona name
+
+            try
+            {
+                string username = null;
+
+                // Check if the input is a JSON string
+                if (sessionKey.Trim().StartsWith("{"))
+                {
+                    // Parse the JSON to extract the token
+                    var jsonResponse = System.Text.Json.JsonSerializer.Deserialize<SessionKeyResponse>(sessionKey);
+
+                    if (!jsonResponse.logged_in)
+                    {
+                        Debug.WriteLine("The provided session data indicates you're not logged in to Steam");
+                        _loginTcs.SetResult(false);
+                        return await _loginTcs.Task;
+                    }
+
+                    // Extract the username
+                    username = jsonResponse.account_name;
+                    Debug.WriteLine($"Extracted username: {username}");
+
+                    // Extract just the token part
+                    sessionKey = jsonResponse.token;
+
+                    // Store the Steam ID for later use
+                    ulong steamIdValue;
+                    if (ulong.TryParse(jsonResponse.steamid, out steamIdValue))
+                    {
+                        _steamId = new SteamID(steamIdValue);
+                        Debug.WriteLine($"Set Steam ID to: {_steamId}");
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"Failed to parse Steam ID: {jsonResponse.steamid}");
+                    }
+                }
+
+                // Store the username for use in OnConnected
+                _currentUsername = username;
+
+                // Connect to Steam using the session key
+                _steamClient.Connect();
+
+                // The session key login will be handled in OnConnected
+                _sessionKey = sessionKey;
+                _isSessionKeyLogin = true;
+
+                return await _loginTcs.Task;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error logging in with session key: {ex.Message}");
+                _loginTcs.SetResult(false);
+                return false;
+            }
+        }
+
+
+        // Add this class to parse the JSON response
+        private class SessionKeyResponse
+        {
+            public bool logged_in { get; set; }
+            public string steamid { get; set; }
+            public int accountid { get; set; }
+            public string account_name { get; set; }
+            public string token { get; set; }
         }
 
         public async Task<bool> LoginWithQRCodeAsync(string qrToken)
@@ -113,7 +243,7 @@ namespace SteamInventoryAIR.Services
             }
         }
 
-        public async Task<string> GetPersonaNameAsync()
+        public async Task<string> GetPersonaNameAsync_OLD()
         {
             // If persona name is empty but we're logged in, try to get it again
             if (string.IsNullOrEmpty(_personaName) && _isLoggedIn && _steamFriends != null)
@@ -121,16 +251,90 @@ namespace SteamInventoryAIR.Services
                 try
                 {
                     _personaName = _steamFriends.GetPersonaName();
-                    Console.WriteLine($"Retrieved persona name in GetPersonaNameAsync: {_personaName}");
+                    Debug.WriteLine($"Retrieved persona name in GetPersonaNameAsync: {_personaName}");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error getting persona name: {ex.Message}");
+                    Debug.WriteLine($"Error getting persona name: {ex.Message}");
                 }
             }
 
             return _personaName ?? "Unknown User";
         }
+        //old version above, new version below
+        public async Task<string> GetPersonaNameAsync_OLD_v2()
+        {
+            if (string.IsNullOrEmpty(_personaName) && _isLoggedIn)
+            {
+                // Create a new TaskCompletionSource if needed
+                _personaNameTcs = new TaskCompletionSource<string>();
+
+                // Request persona information
+                if (_steamId != null)
+                {
+                    _steamFriends.SetPersonaState(EPersonaState.Online);
+                    _steamFriends.RequestFriendInfo(_steamId, EClientPersonaStateFlag.PlayerName);
+                }
+
+                // Wait for the persona name to be set (with a reasonable timeout)
+                var timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+                var completedTask = await Task.WhenAny(_personaNameTcs.Task, timeoutTask);
+
+                if (completedTask == timeoutTask)
+                {
+                    return "Unknown User"; // Timeout occurred
+                }
+
+                return await _personaNameTcs.Task; // Return the actual persona name
+            }
+
+            return _personaName ?? "Unknown User";
+        }
+        //old version above, new version below
+        public async Task<string> GetPersonaNameAsync()
+        {
+            // If we already have a persona name, return it
+            if (!string.IsNullOrEmpty(_personaName))
+            {
+                return _personaName;
+            }
+
+            // If we're logged in but don't have a persona name yet
+            if (_isLoggedIn && _steamId != null)
+            {
+                Debug.WriteLine("No persona name yet. Creating TaskCompletionSource and requesting info...");
+
+                // Create a new TaskCompletionSource
+                _personaNameTcs = new TaskCompletionSource<string>();
+
+                // Request persona information
+                _steamFriends.SetPersonaState(EPersonaState.Online);
+                _steamFriends.RequestFriendInfo(_steamId, EClientPersonaStateFlag.PlayerName);
+
+                // Wait for the persona name to be set (with a reasonable timeout for UI responsiveness)
+                try
+                {
+                    var timeoutTask = Task.Delay(TimeSpan.FromSeconds(3));
+                    var completedTask = await Task.WhenAny(_personaNameTcs.Task, timeoutTask);
+
+                    if (completedTask == _personaNameTcs.Task)
+                    {
+                        // We got the persona name
+                        return await _personaNameTcs.Task;
+                    }
+
+                    Debug.WriteLine("Timed out waiting for persona name");
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error waiting for persona name: {ex.Message}");
+                }
+            }
+
+            return "Unknown User";
+        }
+
+
 
         private class CustomAuthenticator : IAuthenticator
         {
@@ -167,9 +371,9 @@ namespace SteamInventoryAIR.Services
 
 
         //Callback handlers
-        private async void OnConnected(SteamClient.ConnectedCallback callback)
+        private async void OnConnected_OLD(SteamClient.ConnectedCallback callback)
         {
-            Console.WriteLine("Connected to Steam");
+            Debug.WriteLine("Connected to Steam");
 
             var shouldRememberPassword = false;
 
@@ -207,22 +411,103 @@ namespace SteamInventoryAIR.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Authentication error: {ex.Message}");
+                Debug.WriteLine($"Authentication error: {ex.Message}");
                 _loginTcs.SetResult(false);
             }
         }
 
+        //old version above, new version below
+        private async void OnConnected(SteamClient.ConnectedCallback callback)
+        {
+            Debug.WriteLine("Connected to Steam");
+
+            try
+            {
+                if (_isSessionKeyLogin)
+                {
+                    Debug.WriteLine("Handling session key login");
+
+                    // Use the session key for authentication
+                    // Note: This is a simplified approach - in a real implementation,
+                    // you would need to use the session token to authenticate with Steam
+
+                    // For SteamKit2 v3.0.0, we need to use the token in a different way
+                    // This is a placeholder - the actual implementation depends on SteamKit2's API
+
+
+                    _steamUser.LogOn(new SteamUser.LogOnDetails
+                    {
+                        Username = _currentUsername, // Use the username extracted from the JSON
+                        AccessToken = _sessionKey, // Use the session key as the access token
+                        ShouldRememberPassword = false
+                    });
+
+                    // Reset the session key login flag
+                    _isSessionKeyLogin = false;
+
+
+                    // Request persona information
+                    if (_steamId != null)
+                    {
+                        Debug.WriteLine($"Requesting persona info for Steam ID: {_steamId}");
+                        _steamFriends.SetPersonaState(EPersonaState.Online);
+                        _steamFriends.RequestFriendInfo(_steamId, EClientPersonaStateFlag.PlayerName);
+                    }
+                    else
+                    {
+                        Debug.WriteLine("Steam ID is null, cannot request persona info");
+                    }
+
+
+                    _loginTcs.SetResult(true);
+
+                    // Reset the session key login flag
+                    _isSessionKeyLogin = false;
+                }
+                else
+                {
+                    // Existing credential login code
+                    var shouldRememberPassword = false;
+
+                    // Begin authenticating via credentials
+                    var authSession = await _steamClient.Authentication.BeginAuthSessionViaCredentialsAsync(new AuthSessionDetails
+                    {
+                        Username = _currentUsername,
+                        Password = _currentPassword,
+                        IsPersistentSession = shouldRememberPassword,
+                        GuardData = null,
+                        Authenticator = new CustomAuthenticator(_authCode, _twoFactorCode),
+                    });
+
+                    // Starting polling Steam for authentication response
+                    var pollResponse = await authSession.PollingWaitForResultAsync();
+
+                    // Logon to Steam with the access token we have received
+                    _steamUser.LogOn(new SteamUser.LogOnDetails
+                    {
+                        Username = pollResponse.AccountName,
+                        AccessToken = pollResponse.RefreshToken,
+                        ShouldRememberPassword = shouldRememberPassword,
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Authentication error: {ex.Message}");
+                _loginTcs.SetResult(false);
+            }
+        }
 
         private void OnDisconnected(SteamClient.DisconnectedCallback callback)
         {
-            Console.WriteLine("Disconnected from Steam");
+            Debug.WriteLine("Disconnected from Steam");
 
             _isLoggedIn = false;
 
             // If we were logged in, reconnect
             if (_isLoggedIn)
             {
-                Console.WriteLine("Reconnecting to Steam...");
+                Debug.WriteLine("Reconnecting to Steam...");
                 _steamClient.Connect();
             }
             else if (_loginTcs != null && !_loginTcs.Task.IsCompleted)
@@ -235,23 +520,23 @@ namespace SteamInventoryAIR.Services
         {
             if (callback.Result != EResult.OK)
             {
-                Console.WriteLine("Unable to log in to Steam: {0}", callback.Result);
+                Debug.WriteLine("Unable to log in to Steam: {0}", callback.Result);
 
                 if (callback.Result == EResult.AccountLogonDenied)
                 {
                     // Steam Guard is enabled and we need an auth code
-                    Console.WriteLine("This account is protected by Steam Guard. Enter the auth code sent to the associated email.");
+                    Debug.WriteLine("This account is protected by Steam Guard. Enter the auth code sent to the associated email.");
                     //_loginTcs.SetResult(false);
                 }
                 else if (callback.Result == EResult.AccountLoginDeniedNeedTwoFactor)
                 {
                     // Two-factor authentication required
-                    Console.WriteLine("This account is protected by Steam Guard Mobile Authenticator. You need to provide the two-factor code from your mobile app.");
+                    Debug.WriteLine("This account is protected by Steam Guard Mobile Authenticator. You need to provide the two-factor code from your mobile app.");
                     //_loginTcs.SetResult(false);
                 }
                 else if (callback.Result == EResult.InvalidPassword)
                 {
-                    Console.WriteLine("Invalid password provided.");
+                    Debug.WriteLine("Invalid password provided.");
                     //_loginTcs.SetResult(false);
                 }
 
@@ -259,31 +544,74 @@ namespace SteamInventoryAIR.Services
                 return;
             }
 
-            Console.WriteLine("Successfully logged in to Steam");
+            Debug.WriteLine("Successfully logged in to Steam");
             _isLoggedIn = true;
             _steamId = callback.ClientSteamID;
+
+
+            // Request persona information
+            Debug.WriteLine($"Setting persona state and requesting info for {_steamId}");
+
 
             // Get persona name after successful login
             // Important: We need to wait a moment for Steam to initialize the friends list
             _steamFriends.SetPersonaState(EPersonaState.Online);
+            _steamFriends.RequestFriendInfo(_steamId, EClientPersonaStateFlag.PlayerName); // ??????????
 
             _loginTcs.SetResult(true);
         }
 
         private void OnLoggedOff(SteamUser.LoggedOffCallback callback)
         {
-            Console.WriteLine("Logged off of Steam: {0}", callback.Result);
+            Debug.WriteLine("Logged off of Steam: {0}", callback.Result);
             _isLoggedIn = false;
         }
 
-        private void OnPersonaState(SteamFriends.PersonaStateCallback callback)
+        private void OnPersonaState_OLD(SteamFriends.PersonaStateCallback callback)
         {
             // This callback is triggered when the Steam network sends information about a user's status.
             // In this case, we're interested in our own status.
             if (callback.FriendID == _steamId)
             {
                 _personaName = callback.Name;
-                Console.WriteLine($"Updated persona name: {_personaName}");
+                Debug.WriteLine($"Updated persona name: {_personaName}");
+            }
+        }
+        //new version below, old version above
+        private void OnPersonaState_OLD_v2(SteamFriends.PersonaStateCallback callback)
+        {
+            Debug.WriteLine($"Received persona state for: {callback.FriendID}, name: {callback.Name}");
+
+            if (callback.FriendID == _steamId)
+            {
+                _personaName = callback.Name;
+                Debug.WriteLine($"Updated persona name: {_personaName}");
+
+                // Complete the TaskCompletionSource if it exists
+                if (_personaNameTcs != null && !_personaNameTcs.Task.IsCompleted)
+                {
+                    _personaNameTcs.SetResult(_personaName);
+                }
+            }
+            else
+            {
+                Debug.WriteLine($"Persona state was for different Steam ID. Expected: {_steamId}");
+            }
+        }
+        private void OnPersonaState(SteamFriends.PersonaStateCallback callback)
+        {
+            Debug.WriteLine($"Received persona state callback. Friend ID: {callback.FriendID}, Name: {callback.Name}");
+
+            if (_steamId != null && callback.FriendID == _steamId)
+            {
+                Debug.WriteLine($"Matched our Steam ID. Setting persona name to: {callback.Name}");
+                _personaName = callback.Name;
+
+                // Complete the TaskCompletionSource if it exists
+                if (_personaNameTcs != null && !_personaNameTcs.Task.IsCompleted)
+                {
+                    _personaNameTcs.SetResult(_personaName);
+                }
             }
         }
 

@@ -2,6 +2,9 @@ using System.Windows.Input;
 using System.Diagnostics;
 using SteamInventoryAIR.Interfaces;
 
+using Microsoft.Maui.ApplicationModel;
+
+
 namespace SteamInventoryAIR.ViewModels
 {
     public class LoginViewModel : BaseViewModel   //Changed Public -> Internal (because of an error)
@@ -131,28 +134,53 @@ namespace SteamInventoryAIR.ViewModels
                 return;
 
             if (string.IsNullOrEmpty(SessionKey))
+            {
+                // If no session key is provided, open the browser to get one
+                await OpenSessionKeyPage();
                 return;
+            }
 
             try
             {
                 IsBusy = true;
+                LoginStatus = "Logging in with session key...";
+
                 bool success = await _authService.LoginWithSessionKeyAsync(SessionKey);
 
                 if (success)
                 {
-                    // Navigate to main page or trigger navigation event
-                    // For now, we'll just reset the form
+                    string profileName = await _authService.GetPersonaNameAsync();
+                    LoginStatus = $"Successfully logged in as {profileName}";
+
+                    // Reset form fields
                     SessionKey = string.Empty;
+                }
+                else
+                {
+                    LoginStatus = "Login failed. Please check your session key.";
                 }
             }
             catch (Exception ex)
             {
-                // Handle exceptions
-                Debug.WriteLine($"Session key login error: {ex.Message}");
+                LoginStatus = $"Error: {ex.Message}";
+                Debug.WriteLine($"Login error: {ex.Message}");
             }
             finally
             {
                 IsBusy = false;
+            }
+        }
+
+        private async Task OpenSessionKeyPage()
+        {
+            try
+            {
+                // Open the Steam session key page in the default browser
+                await Browser.OpenAsync(new Uri("https://steamcommunity.com/chat/clientjstoken"), BrowserLaunchMode.SystemPreferred);
+            }
+            catch (Exception ex)
+            {
+                LoginStatus = $"Error opening browser: {ex.Message}";
             }
         }
 

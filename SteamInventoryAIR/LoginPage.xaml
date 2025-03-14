@@ -117,7 +117,9 @@ Ctrl + K then Ctrl + C : Comments selected lines
                                     Clicked="OnPasteSessionKeyClicked"
                                     BackgroundColor="Transparent"
                                     HeightRequest="30"
-                                    WidthRequest="30"/>
+                                    WidthRequest="30"
+                                    HorizontalOptions="Center"
+                                    />
                     </Frame>
                     <Button Text="Login" Command="{Binding SessionKeyLoginCommand}" Style="{StaticResource LoginButtonStyle}"/>
                 </StackLayout>
