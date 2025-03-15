@@ -77,7 +77,7 @@ namespace SteamInventoryAIR.ViewModels
 
         // Add these fields
         private System.Timers.Timer _qrCodeRefreshTimer;
-        private const int QR_CODE_REFRESH_INTERVAL = 30000; // 30 seconds (Standard interval by steam) in milliseconds
+        private const int QR_CODE_REFRESH_INTERVAL = 10000; // 30 seconds (Standard interval by steam) in milliseconds
 
         // Commands for login actions
         public ICommand TraditionalLoginCommand { get; }
@@ -355,23 +355,25 @@ namespace SteamInventoryAIR.ViewModels
                 // Call LoginWithQRCodeAsync which will poll for the result
                 bool success = await _authService.LoginWithQRCodeAsync(QrCodeUrl);
 
-                // Stop the refresh timer once we get a result
-                if (_qrCodeRefreshTimer != null && _qrCodeRefreshTimer.Enabled)
-                    _qrCodeRefreshTimer.Stop();
-
+                // Stop the timer if login succeeds
                 if (success)
                 {
+                    // Stop the refresh timer once we get a result
+                    if (_qrCodeRefreshTimer != null && _qrCodeRefreshTimer.Enabled)
+                        _qrCodeRefreshTimer.Stop();
+
                     string profileName = await _authService.GetPersonaNameAsync();
                     LoginStatus = $"Successfully logged in as {profileName}";
-                }
-                else
-                {
-                    LoginStatus = "QR code login failed";
                 }
             }
             catch (Exception ex)
             {
+                // Catch any exceptions to prevent app from exiting
                 Debug.WriteLine($"Error polling for QR code scan: {ex.Message}");
+                //if (_currentMethod == LoginMethod.QRCode)
+                //{
+                //    LoginStatus = "Scan QR code with Steam mobile app";
+                //}
             }
         }
 
@@ -379,7 +381,26 @@ namespace SteamInventoryAIR.ViewModels
         private void InitializeQRCodeRefreshTimer()
         {
             _qrCodeRefreshTimer = new System.Timers.Timer(QR_CODE_REFRESH_INTERVAL);
-            _qrCodeRefreshTimer.Elapsed += async (sender, e) => await RefreshQRCodeAsync();
+
+            // Add try-catch around the timer callback
+            _qrCodeRefreshTimer.Elapsed += async (sender, e) => {
+                try
+                {
+                    await RefreshQRCodeAsync();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error in timer callback: {ex.Message}");
+                    // Make sure to update UI on the main thread
+                    await MainThread.InvokeOnMainThreadAsync(() => {
+                        if (_currentMethod == LoginMethod.QRCode)
+                        {
+                            LoginStatus = "Scan QR code with Steam mobile app";
+                        }
+                    });
+                }
+            };
+
             _qrCodeRefreshTimer.AutoReset = true;
         }
 
@@ -394,8 +415,6 @@ namespace SteamInventoryAIR.ViewModels
                     if (_currentMethod == LoginMethod.QRCode && !IsBusy)
                     {
                         Debug.WriteLine("Automatically refreshing QR code after 30 seconds");
-                        // Stop any ongoing polling operations
-                        await _authService.CancelQRPollingAsync();
                         // Update status to indicate refreshing
                         LoginStatus = "Refreshing QR code...";
                         await ExecuteGenerateQrCodeCommand(true);

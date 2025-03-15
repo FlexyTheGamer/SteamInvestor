@@ -19,7 +19,5 @@ namespace SteamInventoryAIR.Interfaces
 
         Task<bool> SubmitTwoFactorCodeAsync(string twoFactorCode);
 
-        Task CancelQRPollingAsync();
-
     }
 }

@@ -54,7 +54,6 @@ namespace SteamInventoryAIR.Services
         private AuthSession _qrAuthSession;
 
         private TaskCompletionSource<string> _qrCodeTcs;
-        private CancellationTokenSource _qrPollingCts;
 
 
 
@@ -241,64 +240,60 @@ namespace SteamInventoryAIR.Services
                     return false;
                 }
 
-                // Cancel any previous polling operation
-                _qrPollingCts?.Cancel();
-                _qrPollingCts = new CancellationTokenSource();
-
                 Debug.WriteLine("Starting to poll for QR code authentication result");
                 _loginTcs = new TaskCompletionSource<bool>();
 
-
-                //??Nested Try Catch block - this is not really good practice???, but it's a good way to handle exceptions in this case???
-                try
-                {
-                    // Start polling for the authentication result with cancellation token
-                    var pollResponse = await _qrAuthSession.PollingWaitForResultAsync(_qrPollingCts.Token);
-                    Debug.WriteLine($"Received poll response: Account name = {pollResponse.AccountName}");
-                    Debug.WriteLine($"RefreshToken length: {pollResponse.RefreshToken?.Length ?? 0}");
-                    Debug.WriteLine($"AccessToken length: {pollResponse.AccessToken?.Length ?? 0}");
-
-                    // Log on with the access token we received
-                    Debug.WriteLine($"Attempting login with Username: {pollResponse.AccountName}");
-
-                    _steamUser.LogOn(new SteamUser.LogOnDetails
-                    {
-                        Username = pollResponse.AccountName,
-                        AccessToken = pollResponse.AccessToken,
-                        ShouldRememberPassword = false
-                    });
-
-                    // Wait for the login result
-                    return await _loginTcs.Task;
-                }
-                catch (OperationCanceledException)
-                {
-                    Debug.WriteLine("QR code polling was canceled - likely due to refresh");
-                    return false; // Return false instead of letting the exception propagate
-                }
-
-
-
-                //// Start polling for the authentication result
-                //var pollResponse = await _qrAuthSession.PollingWaitForResultAsync();
-                //Debug.WriteLine($"Received poll response: Account name = {pollResponse.AccountName}");
-                //Debug.WriteLine($"RefreshToken length: {pollResponse.RefreshToken?.Length ?? 0}");
-                //Debug.WriteLine($"AccessToken length: {pollResponse.AccessToken?.Length ?? 0}");
-
-                //// Log on with the access token we received
-                //Debug.WriteLine($"Attempting login with Username: {pollResponse.AccountName}");
-
-                //// Log on with the access token we received
-                //_steamUser.LogOn(new SteamUser.LogOnDetails
+                //Removed in proccess of removing the cacnelation token
+                ////??Nested Try Catch block - this is not really good practice???, but it's a good way to handle exceptions in this case???
+                //try
                 //{
-                //    Username = pollResponse.AccountName,
-                //    //AccessToken = pollResponse.RefreshToken,
-                //    AccessToken = pollResponse.AccessToken,
-                //    ShouldRememberPassword = false
-                //});
+                //    // Start polling for the authentication result with cancellation token
+                //    var pollResponse = await _qrAuthSession.PollingWaitForResultAsync(_qrPollingCts.Token);
+                //    Debug.WriteLine($"Received poll response: Account name = {pollResponse.AccountName}");
+                //    Debug.WriteLine($"RefreshToken length: {pollResponse.RefreshToken?.Length ?? 0}");
+                //    Debug.WriteLine($"AccessToken length: {pollResponse.AccessToken?.Length ?? 0}");
 
-                //// Wait for the login result
-                //return await _loginTcs.Task;
+                //    // Log on with the access token we received
+                //    Debug.WriteLine($"Attempting login with Username: {pollResponse.AccountName}");
+
+                //    _steamUser.LogOn(new SteamUser.LogOnDetails
+                //    {
+                //        Username = pollResponse.AccountName,
+                //        AccessToken = pollResponse.AccessToken,
+                //        ShouldRememberPassword = false
+                //    });
+
+                //    // Wait for the login result
+                //    return await _loginTcs.Task;
+                //}
+                //catch (OperationCanceledException)
+                //{
+                //    Debug.WriteLine("QR code polling was canceled - likely due to refresh");
+                //    return false; // Return false instead of letting the exception propagate
+                //}
+
+
+
+                // Start polling for the authentication result without cancellation token
+                var pollResponse = await _qrAuthSession.PollingWaitForResultAsync();
+                Debug.WriteLine($"Received poll response: Account name = {pollResponse.AccountName}");
+                Debug.WriteLine($"RefreshToken length: {pollResponse.RefreshToken?.Length ?? 0}");
+                Debug.WriteLine($"AccessToken length: {pollResponse.AccessToken?.Length ?? 0}");
+
+                // Log on with the access token we received
+                Debug.WriteLine($"Attempting login with Username: {pollResponse.AccountName}");
+
+                // Log on with the access token we received
+                _steamUser.LogOn(new SteamUser.LogOnDetails
+                {
+                    Username = pollResponse.AccountName,
+                    //AccessToken = pollResponse.RefreshToken,
+                    AccessToken = pollResponse.AccessToken,
+                    ShouldRememberPassword = false
+                });
+
+                // Wait for the login result
+                return await _loginTcs.Task;
             }
             catch (Exception ex)
             {
@@ -314,8 +309,6 @@ namespace SteamInventoryAIR.Services
         {
             try
             {
-                // Cancel any ongoing polling operation
-                _qrPollingCts?.Cancel();
 
                 _loginTcs = new TaskCompletionSource<bool>();
 
@@ -367,11 +360,6 @@ namespace SteamInventoryAIR.Services
             }
         }
 
-        public Task CancelQRPollingAsync()
-        {
-            _qrPollingCts?.Cancel();
-            return Task.CompletedTask;
-        }
 
         public async Task<bool> IsLoggedInAsync()
         {
