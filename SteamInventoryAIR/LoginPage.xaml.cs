@@ -39,22 +39,25 @@ public partial class LoginPage : ContentPage
         SessionKeyLoginTemplate.IsVisible = false;
         QRCodeLoginTemplate.IsVisible = false;
 
+        // Reset the login status
+        _viewModel.LoginStatus = string.Empty;
+
         // Show the selected template
         switch (method)
         {
             case LoginMethod.Traditional:
                 TraditionalLoginTemplate.IsVisible = true;
+                _viewModel.CurrentMethod = LoginViewModel.LoginMethod.Traditional;
                 break;
             case LoginMethod.SessionKey:
                 SessionKeyLoginTemplate.IsVisible = true;
+                _viewModel.CurrentMethod = LoginViewModel.LoginMethod.SessionKey;
                 break;
             case LoginMethod.QRCode:
                 QRCodeLoginTemplate.IsVisible = true;
+                _viewModel.CurrentMethod = LoginViewModel.LoginMethod.QRCode;
                 // Generate QR code when this method is selected
-
-                //GenerateQRCode();                                 //Pre MVVM Architecture
-                _viewModel.GenerateQrCodeCommand.Execute(null);     //Added for MVVM Architecture
-
+                _viewModel.GenerateQrCodeCommand.Execute(null);
                 break;
         }
 

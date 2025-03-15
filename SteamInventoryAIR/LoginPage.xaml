@@ -153,7 +153,7 @@ Ctrl + K then Ctrl + C : Comments selected lines
 
                 <StackLayout Spacing="15" VerticalOptions="Center">
                     <Frame BackgroundColor="White" CornerRadius="8" Padding="10" HorizontalOptions="Center">
-                        <Image Source="{Binding QrCodeUrl, TargetNullValue='qr_code_placeholder.png'}" 
+                        <Image Source="{Binding QrCodeImageSource, TargetNullValue='qr_code_placeholder.png'}" 
                                HeightRequest="200" 
                                WidthRequest="200"
                                HorizontalOptions="Center"/>
@@ -163,9 +163,11 @@ Ctrl + K then Ctrl + C : Comments selected lines
                                     Clicked="OnScanQRCodeClicked"
                                     BackgroundColor="Transparent"
                                     HeightRequest="30"
-                                    WidthRequest="30"/>
+                                    WidthRequest="30"
+                                    HorizontalOptions="Center"
+                                    />
                     </Frame>
-                    <Button Text="Login" Command="{Binding QrCodeLoginCommand}" Style="{StaticResource LoginButtonStyle}"/>
+                    <Button Text="Refresh QR Code" Command="{Binding GenerateQrCodeCommand}" Style="{StaticResource LoginButtonStyle}" HorizontalOptions="Center"/>
                 </StackLayout>
             </Grid>
 
