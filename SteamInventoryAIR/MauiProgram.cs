@@ -1,5 +1,12 @@
 ﻿using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
+using SteamInventoryAIR.Interfaces;
+using SteamInventoryAIR.Services;
+using SteamInventoryAIR.ViewModels;
+
+using System.Text.Json;
+using Microsoft.Maui.ApplicationModel;
+
 
 namespace SteamInventoryAIR
 {
@@ -18,9 +25,18 @@ namespace SteamInventoryAIR
 
             builder.UseMauiCommunityToolkit();
 
-#if DEBUG
-    		builder.Logging.AddDebug();
-#endif
+            // Register services
+            builder.Services.AddSingleton<ISteamAuthService, SteamAuthService>();
+
+            // Register ViewModels
+            builder.Services.AddTransient<LoginViewModel>();
+
+            // Register Pages
+            builder.Services.AddTransient<LoginPage>();
+
+            //#if DEBUG
+            //    		builder.Logging.AddDebug();
+            //#endif
 
             return builder.Build();
         }

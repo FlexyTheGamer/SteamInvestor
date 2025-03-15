@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+
+<!--
+Ctrl + K then Ctrl + C : Comments selected lines 
+-->
+
+<!--!!!!!!!!!!!!!!! x:Class value must match your namespace and class name exactly. -->
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:SteamInventoryAIR.ViewModels"
+             x:Class="SteamInventoryAIR.LoginPage"
+             Title="Login"
+             BackgroundColor="#171A21">
+
+    <!-- Define resources for consistent styling -->
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <!-- Button style -->
+            <Style x:Key="LoginButtonStyle" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="#CC2424" />
+                <Setter Property="TextColor" Value="White" />
+                <Setter Property="FontAttributes" Value="Bold" />
+                <Setter Property="CornerRadius" Value="4" />
+                <Setter Property="WidthRequest" Value="200" />
+                <Setter Property="HorizontalOptions" Value="Center" />
+                <Setter Property="Margin" Value="0,10,0,0" />
+            </Style>
+
+            <!-- Tab button style -->
+            <Style x:Key="TabButtonStyle" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="#2A2E35" />
+                <Setter Property="TextColor" Value="#CCCCCC" />
+                <Setter Property="CornerRadius" Value="0" />
+                <Setter Property="Margin" Value="1" />
+            </Style>
+
+            <!-- Entry style -->
+            <Style x:Key="EntryStyle" TargetType="Entry">
+                <Setter Property="BackgroundColor" Value="#32353C" />
+                <Setter Property="TextColor" Value="White" />
+                <Setter Property="PlaceholderColor" Value="#AAAAAA" />
+                <Setter Property="Margin" Value="0,5,0,5" />
+            </Style>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,*,Auto" Padding="20">
+        <!-- Logo/Header -->
+        <Image Grid.Row="0" 
+               Source="login_page_logo.png"
+               HeightRequest="150"
+               HorizontalOptions="Center"
+               Margin="0,40,0,20"/>
+
+        <!-- Login Content Area -->
+        <Grid Grid.Row="1" x:Name="LoginContentGrid">
+
+            <!--Traditional Login Template - MVVM Ver - uses data binding -->
+            <Grid x:Name="TraditionalLoginTemplate" IsVisible="false">
+
+                <StackLayout Spacing="15" VerticalOptions="Center">
+                    <Entry Placeholder="Username" Text="{Binding Username}" Style="{StaticResource EntryStyle}"/>
+                    <Entry Placeholder="Password" IsPassword="True" Text="{Binding Password}" Style="{StaticResource EntryStyle}"/>
+                    <Entry Placeholder="Authorization Code (Optional)" Text="{Binding AuthCode}" Style="{StaticResource EntryStyle}"/>
+                    <Button Text="Login" Command="{Binding TraditionalLoginCommand}" Style="{StaticResource LoginButtonStyle}"/>
+                </StackLayout>
+            </Grid>
+
+            <!-- Session Key Login Template - MVVM Ver - uses data binding -->
+            <Grid x:Name="SessionKeyLoginTemplate" IsVisible="false">
+
+                <StackLayout Spacing="15" VerticalOptions="Center">
+                    <Button Text="Where can I find my Steam Session key?" 
+                            Clicked="OnHelpButtonClicked"
+                            BackgroundColor="Transparent"
+                            TextColor="#66C0F4"
+                            FontSize="14"
+                            HorizontalOptions="Center"/>
+                    <Entry Placeholder="Steam Session Key" Text="{Binding SessionKey}" Style="{StaticResource EntryStyle}"/>
+                    <Frame BackgroundColor="#32353C" CornerRadius="4" Padding="10" HorizontalOptions="Center">
+                        <ImageButton Source="clipboard_icon.png" 
+                                    Clicked="OnPasteSessionKeyClicked"
+                                    BackgroundColor="Transparent"
+                                    HeightRequest="30"
+                                    WidthRequest="30"
+                                    HorizontalOptions="Center"
+                                    />
+                    </Frame>
+                    <Button Text="Login" Command="{Binding SessionKeyLoginCommand}" Style="{StaticResource LoginButtonStyle}"/>
+                </StackLayout>
+            </Grid>
+
+
+            <!-- QR Code Login Template - MVVM Ver - uses data binding -->
+            <Grid x:Name="QRCodeLoginTemplate" IsVisible="false">
+
+                <StackLayout Spacing="15" VerticalOptions="Center">
+                    <Frame BackgroundColor="White" CornerRadius="8" Padding="10" HorizontalOptions="Center">
+                        <Image Source="{Binding QrCodeImageSource, TargetNullValue='qr_code_placeholder.png'}" 
+                               HeightRequest="200" 
+                               WidthRequest="200"
+                               HorizontalOptions="Center"/>
+                    </Frame>
+                    <Frame BackgroundColor="#32353C" CornerRadius="4" Padding="10" HorizontalOptions="Center" Margin="0,10,0,0">
+                        <ImageButton Source="camera_icon.png" 
+                                    Clicked="OnScanQRCodeClicked"
+                                    BackgroundColor="Transparent"
+                                    HeightRequest="30"
+                                    WidthRequest="30"
+                                    HorizontalOptions="Center"
+                                    />
+                    </Frame>
+                    <Button Text="Refresh QR Code" Command="{Binding GenerateQrCodeCommand}" Style="{StaticResource LoginButtonStyle}" HorizontalOptions="Center"/>
+                </StackLayout>
+            </Grid>
+
+        </Grid>
+
+
+        <!-- Login Type Selector -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,*,*" Margin="0,20,0,0">
+            <Button Grid.Column="0" 
+                    Text="Steam login" 
+                    x:Name="SteamLoginButton"
+                    Clicked="OnSteamLoginClicked"
+                    Style="{StaticResource TabButtonStyle}"/>
+
+            <Button Grid.Column="1" 
+                    Text="Web Session" 
+                    x:Name="WebSessionButton"
+                    Clicked="OnWebSessionClicked"
+                    Style="{StaticResource TabButtonStyle}"/>
+
+            <Button Grid.Column="2" 
+                    Text="QR Code" 
+                    x:Name="QRCodeButton"
+                    Clicked="OnQRCodeClicked"
+                    Style="{StaticResource TabButtonStyle}"/>
+        </Grid>
+
+
+        <Label Text="{Binding LoginStatus}" 
+       TextColor="{Binding LoginStatus, Converter={StaticResource LoginStatusColorConverter}}"
+       HorizontalOptions="Center"
+       Margin="0,10,0,0"
+       IsVisible="{Binding LoginStatus, Converter={StaticResource StringNotEmptyConverter}}"/>
+        
+
+    </Grid>
+
+
+</ContentPage>
+
