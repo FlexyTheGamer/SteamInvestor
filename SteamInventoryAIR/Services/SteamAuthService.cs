@@ -174,7 +174,7 @@ namespace SteamInventoryAIR.Services
                 var pollResponse = await _authSession.PollingWaitForResultAsync();
 
                 // Log on with the access token
-                _model.LogOnWithToken(pollResponse.AccountName, pollResponse.AccessToken);
+                _model.LogOnWithToken(pollResponse.AccountName, pollResponse.RefreshToken);
 
                 return await _loginTcs.Task;
             }
