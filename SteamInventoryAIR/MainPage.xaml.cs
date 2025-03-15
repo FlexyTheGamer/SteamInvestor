@@ -6,13 +6,17 @@ namespace SteamInventoryAIR
 {
     public partial class MainPage : ContentPage
     {
-        int count = 0;
+        int count = 0; //Delete?
+
         private SteamClient steamClient;
         private CallbackManager callbackManager;
         private SteamUser steamUser;
 
+        //Steam User Account Data
         string user = "ivan30123";
         string pass = "EFrqxuEFHpYs2dmQKzNX";
+
+
         string previouslyStoredGuardData = null; // For the sake of this sample, we do not persist guard data
         bool isRunning = true;
 
@@ -35,7 +39,7 @@ namespace SteamInventoryAIR
         }
 
 
-        private void OnCounterClicked(object sender, EventArgs e)
+        private void OnCounterClicked(object sender, EventArgs e)   //Part of the introduction form of the project
         {
             count++;
 
@@ -49,7 +53,8 @@ namespace SteamInventoryAIR
             SemanticScreenReader.Announce(CounterBtn.Text);
         }
 
-        private void ConnectToSteam()
+
+        private void ConnectToSteam()   //eqivalent to RunCallBacks() from SteamAuthService.cs
         {
             steamClient.Connect();
 
