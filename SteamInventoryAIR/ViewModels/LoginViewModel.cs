@@ -77,7 +77,7 @@ namespace SteamInventoryAIR.ViewModels
 
         // Add these fields
         private System.Timers.Timer _qrCodeRefreshTimer;
-        private const int QR_CODE_REFRESH_INTERVAL = 10000; // 30 seconds (Standard interval by steam) in milliseconds
+        private const int QR_CODE_REFRESH_INTERVAL = 30000; // 30 seconds (Standard interval by steam) in milliseconds
 
         // Commands for login actions
         public ICommand TraditionalLoginCommand { get; }
@@ -303,19 +303,6 @@ namespace SteamInventoryAIR.ViewModels
 
                 LoginStatus = "Logging in with QR code...";
 
-                //OLD CODE????
-                //// Wait for user to scan QR code
-                //bool success = await _authService.LoginWithQRCodeAsync(QrCodeUrl);
-
-                //if (success)
-                //{
-                //    string profileName = await _authService.GetPersonaNameAsync();
-                //    LoginStatus = $"Successfully logged in as {profileName}";
-                //}
-                //else
-                //{
-                //    LoginStatus = "QR code login failed";
-                //}
 
                 if (string.IsNullOrEmpty(token))
                 {
@@ -350,47 +337,99 @@ namespace SteamInventoryAIR.ViewModels
 
         private async Task PollForQRCodeScanAsync()
         {
+
+            //THERE ARE 3 nested try-catch blocks in this method that are potentially unnecessary.......
             try
             {
+                Debug.WriteLine("=== PollForQRCodeScanAsync: Starting QR code polling ===");
+
                 // Call LoginWithQRCodeAsync which will poll for the result
+                Debug.WriteLine("Calling _authService.LoginWithQRCodeAsync");
                 bool success = await _authService.LoginWithQRCodeAsync(QrCodeUrl);
 
                 // Stop the timer if login succeeds
                 if (success)
                 {
-                    // Stop the refresh timer once we get a result
                     if (_qrCodeRefreshTimer != null && _qrCodeRefreshTimer.Enabled)
+                    {
+                        Debug.WriteLine("Stopping QR code refresh timer after successful login");
                         _qrCodeRefreshTimer.Stop();
+                    }
 
                     string profileName = await _authService.GetPersonaNameAsync();
                     LoginStatus = $"Successfully logged in as {profileName}";
                 }
+                else
+                {
+                    // Login failed but don't update status if we're refreshing
+                    if (LoginStatus != "Refreshing QR code...")
+                    {
+                        LoginStatus = "QR code login failed. Please try scanning again.";
+                    }
+                }
+
+                /////////Trying to simplify the code back to the original when the qr code worked...
+                //// Use Task.Run to run the polling in a background thread
+                //await Task.Run(async () => {
+                //    try
+                //    {
+                //        bool success = await _authService.LoginWithQRCodeAsync(QrCodeUrl);
+
+                //        // Handle result on UI thread
+                //        await MainThread.InvokeOnMainThreadAsync(() => {
+                //            if (success)
+                //            {
+                //                if (_qrCodeRefreshTimer != null && _qrCodeRefreshTimer.Enabled)
+                //                    _qrCodeRefreshTimer.Stop();
+
+                //                // Get username in a separate try block
+                //                try
+                //                {
+                //                    var profileName = _authService.GetPersonaNameAsync().Result;
+                //                    LoginStatus = $"Successfully logged in as {profileName}";
+                //                }
+                //                catch
+                //                {
+                //                    LoginStatus = "Successfully logged in";
+                //                }
+                //            }
+                //        });
+                //    }
+                //    catch (Exception ex)
+                //    {
+                //        Debug.WriteLine($"Background polling error: {ex.Message}");
+                //    }
+                //});
             }
             catch (Exception ex)
             {
                 // Catch any exceptions to prevent app from exiting
-                Debug.WriteLine($"Error polling for QR code scan: {ex.Message}");
-                //if (_currentMethod == LoginMethod.QRCode)
-                //{
-                //    LoginStatus = "Scan QR code with Steam mobile app";
-                //}
+                Debug.WriteLine($"=== ERROR in PollForQRCodeScanAsync: {ex.Message} ===");
+                Debug.WriteLine($"Exception type: {ex.GetType().Name}");
+                Debug.WriteLine($"Stack trace: {ex.StackTrace}");
             }
         }
 
         //initialize the timer
         private void InitializeQRCodeRefreshTimer()
         {
+            Debug.WriteLine("=== InitializeQRCodeRefreshTimer ===");
             _qrCodeRefreshTimer = new System.Timers.Timer(QR_CODE_REFRESH_INTERVAL);
+            Debug.WriteLine($"Created QR code refresh timer with interval {QR_CODE_REFRESH_INTERVAL}ms");
 
             // Add try-catch around the timer callback
             _qrCodeRefreshTimer.Elapsed += async (sender, e) => {
                 try
                 {
+                    Debug.WriteLine("QR code refresh timer elapsed - triggering refresh");
                     await RefreshQRCodeAsync();
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Error in timer callback: {ex.Message}");
+                    Debug.WriteLine($"=== ERROR in timer callback: {ex.Message} ===");
+                    Debug.WriteLine($"Exception type: {ex.GetType().Name}");
+                    Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+
                     // Make sure to update UI on the main thread
                     await MainThread.InvokeOnMainThreadAsync(() => {
                         if (_currentMethod == LoginMethod.QRCode)
@@ -402,6 +441,7 @@ namespace SteamInventoryAIR.ViewModels
             };
 
             _qrCodeRefreshTimer.AutoReset = true;
+            Debug.WriteLine("QR code timer initialized with AutoReset = true");
         }
 
         // refresh the QR code
@@ -409,21 +449,51 @@ namespace SteamInventoryAIR.ViewModels
         {
             try
             {
-                // Execute on the UI thread
-                await MainThread.InvokeOnMainThreadAsync(async () =>
+                Debug.WriteLine("=== RefreshQRCodeAsync: QR code refresh timer triggered ===");
+
+                ///////////Trying to simplfy things as it was before the qr code stopped working...
+                //// Execute on the UI thread
+                //await MainThread.InvokeOnMainThreadAsync(async () =>
+                //{
+                //    if (_currentMethod == LoginMethod.QRCode && !IsBusy)
+                //    {
+                //        Debug.WriteLine("Automatically refreshing QR code after timeout");
+
+                //        // Update status to indicate refreshing
+                //        LoginStatus = "Refreshing QR code...";
+                //        Debug.WriteLine("Set LoginStatus to 'Refreshing QR code...'");
+
+                //        // Generate a new QR code (this will start a new authentication session)
+                //        await ExecuteGenerateQrCodeCommand(true);
+
+                //        // Previous polling operation will fail, but the exception is handled
+                //    }
+                //    else
+                //    {
+                //        Debug.WriteLine($"Skipping QR refresh: CurrentMethod={_currentMethod}, IsBusy={IsBusy}");
+                //    }
+                //});
+
+
+                Debug.WriteLine("QR code refresh timer triggered");
+
+                // Only refresh if we're still on the QR code tab and not busy
+                if (_currentMethod == LoginMethod.QRCode && !IsBusy)
                 {
-                    if (_currentMethod == LoginMethod.QRCode && !IsBusy)
-                    {
-                        Debug.WriteLine("Automatically refreshing QR code after 30 seconds");
-                        // Update status to indicate refreshing
-                        LoginStatus = "Refreshing QR code...";
-                        await ExecuteGenerateQrCodeCommand(true);
-                    }
-                });
+                    Debug.WriteLine("Automatically refreshing QR code after timeout");
+                    Debug.WriteLine("Refreshing QR code");
+                    LoginStatus = "Refreshing QR code...";
+                    Debug.WriteLine("Set LoginStatus to 'Refreshing QR code...'");
+
+                    // Just generate a new QR code
+                    await ExecuteGenerateQrCodeCommand(true);
+                }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error refreshing QR code: {ex.Message}");
+                Debug.WriteLine($"=== ERROR in RefreshQRCodeAsync: {ex.Message} ===");
+                Debug.WriteLine($"Exception type: {ex.GetType().Name}");
+                Debug.WriteLine($"Stack trace: {ex.StackTrace}");
             }
         }
 

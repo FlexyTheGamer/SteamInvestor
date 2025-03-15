@@ -234,73 +234,64 @@ namespace SteamInventoryAIR.Services
         {
             try
             {
+
                 if (_qrAuthSession == null)
                 {
                     Debug.WriteLine("No active QR auth session");
                     return false;
                 }
 
+                Debug.WriteLine("=== LoginWithQRCodeAsync: Starting QR code authentication ===");Debug.WriteLine("=== LoginWithQRCodeAsync: Starting QR code authentication ===");
                 Debug.WriteLine("Starting to poll for QR code authentication result");
                 _loginTcs = new TaskCompletionSource<bool>();
 
-                //Removed in proccess of removing the cacnelation token
+
                 ////??Nested Try Catch block - this is not really good practice???, but it's a good way to handle exceptions in this case???
-                //try
-                //{
-                //    // Start polling for the authentication result with cancellation token
-                //    var pollResponse = await _qrAuthSession.PollingWaitForResultAsync(_qrPollingCts.Token);
-                //    Debug.WriteLine($"Received poll response: Account name = {pollResponse.AccountName}");
-                //    Debug.WriteLine($"RefreshToken length: {pollResponse.RefreshToken?.Length ?? 0}");
-                //    Debug.WriteLine($"AccessToken length: {pollResponse.AccessToken?.Length ?? 0}");
 
-                //    // Log on with the access token we received
-                //    Debug.WriteLine($"Attempting login with Username: {pollResponse.AccountName}");
-
-                //    _steamUser.LogOn(new SteamUser.LogOnDetails
-                //    {
-                //        Username = pollResponse.AccountName,
-                //        AccessToken = pollResponse.AccessToken,
-                //        ShouldRememberPassword = false
-                //    });
-
-                //    // Wait for the login result
-                //    return await _loginTcs.Task;
-                //}
-                //catch (OperationCanceledException)
-                //{
-                //    Debug.WriteLine("QR code polling was canceled - likely due to refresh");
-                //    return false; // Return false instead of letting the exception propagate
-                //}
-
-
-
-                // Start polling for the authentication result without cancellation token
-                var pollResponse = await _qrAuthSession.PollingWaitForResultAsync();
-                Debug.WriteLine($"Received poll response: Account name = {pollResponse.AccountName}");
-                Debug.WriteLine($"RefreshToken length: {pollResponse.RefreshToken?.Length ?? 0}");
-                Debug.WriteLine($"AccessToken length: {pollResponse.AccessToken?.Length ?? 0}");
-
-                // Log on with the access token we received
-                Debug.WriteLine($"Attempting login with Username: {pollResponse.AccountName}");
-
-                // Log on with the access token we received
-                _steamUser.LogOn(new SteamUser.LogOnDetails
+                try
                 {
-                    Username = pollResponse.AccountName,
-                    //AccessToken = pollResponse.RefreshToken,
-                    AccessToken = pollResponse.AccessToken,
-                    ShouldRememberPassword = false
-                });
+                    //// Start polling for the authentication result without cancellation token
+                    // Poll for result (this will block until scanned or timeout)
+                    Debug.WriteLine("Calling _qrAuthSession.PollingWaitForResultAsync()");
+                    var pollResponse = await _qrAuthSession.PollingWaitForResultAsync();
 
-                // Wait for the login result
-                return await _loginTcs.Task;
+
+                    Debug.WriteLine($"Received poll response: Account name = {pollResponse.AccountName}");
+                    Debug.WriteLine($"RefreshToken length: {pollResponse.RefreshToken?.Length ?? 0}");
+                    Debug.WriteLine($"AccessToken length: {pollResponse.AccessToken?.Length ?? 0}");
+
+                    Debug.WriteLine($"RefreshToken first 10 chars: {(pollResponse.RefreshToken?.Length > 10 ? pollResponse.RefreshToken.Substring(0, 10) + "..." : "N/A")}");
+                    Debug.WriteLine($"AccessToken first 10 chars: {(pollResponse.AccessToken?.Length > 10 ? pollResponse.AccessToken.Substring(0, 10) + "..." : "N/A")}");
+
+                    //// Log on with the access token we received
+                    Debug.WriteLine($"Attempting login with Username: {pollResponse.AccountName}");
+                    //Debug.WriteLine("Calling _steamUser.LogOn with RefreshToken as AccessToken (sample approach)");
+                    _steamUser.LogOn(new SteamUser.LogOnDetails
+                    {
+                        Username = pollResponse.AccountName,
+                        //AccessToken = pollResponse.RefreshToken,
+                        AccessToken = pollResponse.AccessToken,
+                        ShouldRememberPassword = false
+                    });
+
+                    // Wait for the login result
+                    Debug.WriteLine("Waiting for login result from OnLoggedOn callback");
+                    return await _loginTcs.Task;
+                }
+                catch (TaskCanceledException ex)
+                {
+                    Debug.WriteLine($"QR code polling was canceled: {ex.Message}");
+                    // Don't set result on _loginTcs if it's due to refresh
+                    return false;
+                }
+
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error logging in with QR code: {ex.Message}");
+                Debug.WriteLine($"=== ERROR in LoginWithQRCodeAsync: {ex.Message} ===");
                 Debug.WriteLine($"Exception details: {ex}");
-                if (_loginTcs != null && !_loginTcs.Task.IsCompleted)
-                    _loginTcs.SetResult(false);
+                Debug.WriteLine($"Exception type: {ex.GetType().Name}");
+                Debug.WriteLine($"Stack trace: {ex.StackTrace}");
                 return false;
             }
         }
@@ -310,52 +301,69 @@ namespace SteamInventoryAIR.Services
             try
             {
 
+                Debug.WriteLine("=== GenerateQRCodeTokenAsync: Starting QR code generation ===");
+
                 _loginTcs = new TaskCompletionSource<bool>();
 
                 // Create a new TaskCompletionSource for the QR code URL
                 _qrCodeTcs = new TaskCompletionSource<string>();
 
+
                 Debug.WriteLine("Initializing QR code generation");
 
                 // Set a flag to indicate we're doing QR code authentication
                 _isQrCodeLogin = true;
+                Debug.WriteLine("Set _isQrCodeLogin flag to true");
 
                 // Connect to Steam
                 if (_steamClient.IsConnected)
                 {
                     Debug.WriteLine("Already connected to Steam, proceeding with QR code generation");
+                    try
+                    {
+                        // Generate the QR code directly instead of waiting for OnConnected
+                        Debug.WriteLine("Generating QR code via BeginAuthSessionViaQRAsync (direct)");
+                        var authSession = await _steamClient.Authentication.BeginAuthSessionViaQRAsync(new AuthSessionDetails
+                        {
+                            PlatformType = EAuthTokenPlatformType.k_EAuthTokenPlatformType_MobileApp,
+                            ClientOSType = EOSType.Android9,
+                            Authenticator = new CustomAuthenticator(null, null)
+                        });
+                        Debug.WriteLine("Successfully created QR auth session");
+
+                        // Store the auth session for later use
+                        _qrAuthSession = authSession;
+
+                        // Get the QR code challenge URL
+                        string qrCodeUrl = authSession.ChallengeURL;
+                        Debug.WriteLine($"Generated QR code URL: {qrCodeUrl}");
+
+                        return qrCodeUrl;
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Error generating QR code while connected: {ex.Message}");
+                        Debug.WriteLine($"Exception details: {ex}");
+                        throw; // Rethrow to be caught by outer try/catch
+                    }
                 }
                 else
                 {
                     Debug.WriteLine("Connecting to Steam for QR code generation");
                     _steamClient.Connect();
+                    Debug.WriteLine("Called _steamClient.Connect()");
+
+
+                    Debug.WriteLine("Waiting for QR code URL from OnConnected callback");
+
+                    return await _qrCodeTcs.Task;
                 }
 
-                ////-----------------old code - removed becuase QR code generation happens before connecting to Steam
-                //// Set a flag to indicate we're doing QR code authentication
-                //_isQrCodeLogin = true;
-
-                //// Create a new authentication session for QR login
-                //var authSession = await _steamClient.Authentication.BeginAuthSessionViaQRAsync(new AuthSessionDetails
-                //{
-                //    PlatformType = EAuthTokenPlatformType.k_EAuthTokenPlatformType_MobileApp,
-                //    ClientOSType = EOSType.Android9,
-                //    Authenticator = new CustomAuthenticator(null, null)
-                //});
-
-                //// Get the QR code challenge URL
-                //string qrCodeUrl = authSession.ChallengeURL;
-
-                //// Store the auth session for later use
-                //_qrAuthSession = authSession;
-
-                //Debug.WriteLine($"Generated QR code URL: {qrCodeUrl}");
-
-                return await _qrCodeTcs.Task;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error generating QR code: {ex.Message}");
+                Debug.WriteLine($"=== ERROR in GenerateQRCodeTokenAsync: {ex.Message} ===");
+                Debug.WriteLine($"Stack trace: {ex.StackTrace}");
                 return null;
             }
         }
@@ -366,13 +374,15 @@ namespace SteamInventoryAIR.Services
             return _isLoggedIn;
         }
 
-        public async Task LogoutAsync()
+        public async Task<bool> LogoutAsync()
         {
             if (_isLoggedIn)
             {
                 _steamUser.LogOff();
                 _isLoggedIn = false;
+                return true; // Successfully logged out
             }
+            return false; // Was not logged in
         }
 
         public async Task<string> GetPersonaNameAsync_OLD()
@@ -503,52 +513,6 @@ namespace SteamInventoryAIR.Services
 
 
         //Callback handlers
-        private async void OnConnected_OLD(SteamClient.ConnectedCallback callback)
-        {
-            Debug.WriteLine("Connected to Steam");
-
-            var shouldRememberPassword = false;
-
-            try
-            {
-                // Begin authenticating via credentials
-                var authSession = await _steamClient.Authentication.BeginAuthSessionViaCredentialsAsync(new AuthSessionDetails
-                {
-                    Username = _currentUsername,  
-                    Password = _currentPassword,
-                    IsPersistentSession = shouldRememberPassword,
-                    GuardData = _previousGuardData, // You can store and use previous guard data if needed
-                    Authenticator = new CustomAuthenticator(_authCode, _twoFactorCode),         //Umjesto UserConsoleAuthenticator() koristimo CustomAuthenticator(2arg) 
-                });
-
-                // Starting polling Steam for authentication response
-                var pollResponse = await authSession.PollingWaitForResultAsync();
-
-
-                if (pollResponse.NewGuardData != null)
-                {
-                    // When using certain two factor methods (such as email 2fa), guard data may be provided by Steam
-                    // for use in future authentication sessions to avoid triggering 2FA again (this works similarly to the old sentry file system).
-                    // Do note that this guard data is also a JWT token and has an expiration date.
-                    _previousGuardData = pollResponse.NewGuardData;
-                }
-
-                // Logon to Steam with the access token we have received
-                _steamUser.LogOn(new SteamUser.LogOnDetails
-                {
-                    Username = pollResponse.AccountName,
-                    AccessToken = pollResponse.RefreshToken,
-                    ShouldRememberPassword = shouldRememberPassword,
-                });
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Authentication error: {ex.Message}");
-                _loginTcs.SetResult(false);
-            }
-        }
-
-        //old version above, new version below
         private async void OnConnected(SteamClient.ConnectedCallback callback)
         {
             Debug.WriteLine("Connected to Steam");
@@ -559,44 +523,50 @@ namespace SteamInventoryAIR.Services
 
                 if (_isQrCodeLogin && _qrCodeTcs != null)
                 {
-                    Debug.WriteLine("Handling QR code login");
+                    Debug.WriteLine("=== OnConnected: Handling QR code login ===");
 
 
-                    if (_qrCodeTcs == null)
+                    try
                     {
-                        Debug.WriteLine("WARNING: _qrCodeTcs was null in OnConnected, creating a new one");
-                        _qrCodeTcs = new TaskCompletionSource<string>();
-                    }
+                        // Now that we're connected, generate the QR code
+                        Debug.WriteLine("Generating QR code via BeginAuthSessionViaQRAsync");
+                        var authSession = await _steamClient.Authentication.BeginAuthSessionViaQRAsync(new AuthSessionDetails
+                        {
+                            PlatformType = EAuthTokenPlatformType.k_EAuthTokenPlatformType_MobileApp,
+                            ClientOSType = EOSType.Android9,
+                            Authenticator = new CustomAuthenticator(null, null)
+                        });
+                        Debug.WriteLine("Successfully created QR auth session");
 
-                    // PANIC MODE FIX
-                    // Now that we're connected, generate the QR code
-                    Debug.WriteLine("Generating QR code via BeginAuthSessionViaQRAsync");
-                    var authSession = await _steamClient.Authentication.BeginAuthSessionViaQRAsync(new AuthSessionDetails
-                    {
-                        PlatformType = EAuthTokenPlatformType.k_EAuthTokenPlatformType_MobileApp,
-                        ClientOSType = EOSType.Android9,
-                        Authenticator = new CustomAuthenticator(null, null)
-                    });
+                        // Store the auth session for later use
+                        _qrAuthSession = authSession;
 
-                    // Store the auth session for later use
-                    _qrAuthSession = authSession;
+                        // Get the QR code challenge URL
+                        string qrCodeUrl = authSession.ChallengeURL;
+                        Debug.WriteLine($"Generated QR code URL: {qrCodeUrl}");
 
-                    // Get the QR code challenge URL
-                    string qrCodeUrl = authSession.ChallengeURL;
-                    Debug.WriteLine($"Generated QR code URL: {qrCodeUrl}");
-
-                    // Complete the task with the QR code URL
-                    if (_qrCodeTcs != null && !_qrCodeTcs.Task.IsCompleted)
-                    {
+                        // Complete the task with the QR code URL
                         Debug.WriteLine("Setting QR code URL result to _qrCodeTcs");
-                        _qrCodeTcs.SetResult(qrCodeUrl);
+                        if (!_qrCodeTcs.Task.IsCompleted)
+                        {
+                            _qrCodeTcs.SetResult(qrCodeUrl);
+                        }
+                        else
+                        {
+                            Debug.WriteLine("WARNING: _qrCodeTcs task was already completed");
+                        }
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        Debug.WriteLine($"Could not set QR code URL: _qrCodeTcs is {(_qrCodeTcs == null ? "null" : "already completed")}");
+                        Debug.WriteLine($"=== ERROR in OnConnected QR code generation: {ex.Message} ===");
+                        Debug.WriteLine($"Exception type: {ex.GetType().Name}");
+                        Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+
+                        if (_qrCodeTcs != null && !_qrCodeTcs.Task.IsCompleted)
+                        {
+                            _qrCodeTcs.SetException(ex);
+                        }
                     }
-                    //// Complete the task with the QR code URL
-                    //_qrCodeTcs.SetResult(qrCodeUrl);
                 }
                 else if (_isSessionKeyLogin)
                 {
@@ -608,8 +578,6 @@ namespace SteamInventoryAIR.Services
 
                     // For SteamKit2 v3.0.0, we need to use the token in a different way
                     // This is a placeholder - the actual implementation depends on SteamKit2's API
-
-
 
                     _steamUser.LogOn(new SteamUser.LogOnDetails
                     {
@@ -708,6 +676,9 @@ namespace SteamInventoryAIR.Services
 
         private void OnLoggedOn(SteamUser.LoggedOnCallback callback)
         {
+
+            Debug.WriteLine($"=== OnLoggedOn: Received login result: {callback.Result} ===");
+
             if (callback.Result != EResult.OK)
             {
                 Debug.WriteLine($"Unable to log in to Steam: {callback.Result}");
@@ -716,41 +687,52 @@ namespace SteamInventoryAIR.Services
                 if (callback.Result == EResult.AccountLogonDenied)
                 {
                     // Steam Guard is enabled and we need an auth code
-                    Debug.WriteLine("This account is protected by Steam Guard. Enter the auth code sent to the associated email.");
-                    //_loginTcs.SetResult(false);
+                    Debug.WriteLine("This account is protected by Steam Guard email. Enter the auth code sent to the associated email.");
                 }
                 else if (callback.Result == EResult.AccountLoginDeniedNeedTwoFactor)
                 {
                     // Two-factor authentication required
                     Debug.WriteLine("This account is protected by Steam Guard Mobile Authenticator. You need to provide the two-factor code from your mobile app.");
-                    //_loginTcs.SetResult(false);
                 }
                 else if (callback.Result == EResult.InvalidPassword)
                 {
                     Debug.WriteLine("Invalid password provided.");
                     Debug.WriteLine($"Is using access token: {!string.IsNullOrEmpty(callback.VanityURL)}");
-                    //_loginTcs.SetResult(false);
+                }
+                else if (callback.Result == EResult.AccessDenied)
+                {
+                    Debug.WriteLine("Access denied. This typically occurs when the token is incorrect or expired.");
+                    Debug.WriteLine($"VanityURL: {callback.VanityURL}");
+                    Debug.WriteLine($"EmailDomain: {callback.EmailDomain}");
                 }
 
-                _loginTcs.SetResult(false);
+                if (_loginTcs != null && !_loginTcs.Task.IsCompleted)
+                {
+                    Debug.WriteLine("Setting _loginTcs result to false due to login failure");
+                    _loginTcs.SetResult(false);
+                }
                 return;
             }
 
             Debug.WriteLine("Successfully logged in to Steam");
             _isLoggedIn = true;
             _steamId = callback.ClientSteamID;
+            Debug.WriteLine($"Logged in as Steam ID: {_steamId}");
 
 
             // Request persona information
             Debug.WriteLine($"Setting persona state and requesting info for {_steamId}");
-
 
             // Get persona name after successful login
             // Important: We need to wait a moment for Steam to initialize the friends list
             _steamFriends.SetPersonaState(EPersonaState.Online);
             _steamFriends.RequestFriendInfo(_steamId, EClientPersonaStateFlag.PlayerName); // ??????????
 
-            _loginTcs.SetResult(true);
+            if (_loginTcs != null && !_loginTcs.Task.IsCompleted)
+            {
+                Debug.WriteLine("Setting _loginTcs result to true for successful login");
+                _loginTcs.SetResult(true);
+            }
         }
 
         private void OnLoggedOff(SteamUser.LoggedOffCallback callback)
@@ -759,40 +741,11 @@ namespace SteamInventoryAIR.Services
             _isLoggedIn = false;
         }
 
-        private void OnPersonaState_OLD(SteamFriends.PersonaStateCallback callback)
-        {
-            // This callback is triggered when the Steam network sends information about a user's status.
-            // In this case, we're interested in our own status.
-            if (callback.FriendID == _steamId)
-            {
-                _personaName = callback.Name;
-                Debug.WriteLine($"Updated persona name: {_personaName}");
-            }
-        }
-        //new version below, old version above
-        private void OnPersonaState_OLD_v2(SteamFriends.PersonaStateCallback callback)
-        {
-            Debug.WriteLine($"Received persona state for: {callback.FriendID}, name: {callback.Name}");
-
-            if (callback.FriendID == _steamId)
-            {
-                _personaName = callback.Name;
-                Debug.WriteLine($"Updated persona name: {_personaName}");
-
-                // Complete the TaskCompletionSource if it exists
-                if (_personaNameTcs != null && !_personaNameTcs.Task.IsCompleted)
-                {
-                    _personaNameTcs.SetResult(_personaName);
-                }
-            }
-            else
-            {
-                Debug.WriteLine($"Persona state was for different Steam ID. Expected: {_steamId}");
-            }
-        }
         private void OnPersonaState(SteamFriends.PersonaStateCallback callback)
         {
-            Debug.WriteLine($"Received persona state callback. Friend ID: {callback.FriendID}, Name: {callback.Name}");
+            Debug.WriteLine($"=== OnPersonaState: Received persona state callback ===");
+            Debug.WriteLine($"Friend ID: {callback.FriendID}, Name: {callback.Name}");
+            Debug.WriteLine($"Our Steam ID: {_steamId}");
 
             if (_steamId != null && callback.FriendID == _steamId)
             {
@@ -802,8 +755,17 @@ namespace SteamInventoryAIR.Services
                 // Complete the TaskCompletionSource if it exists
                 if (_personaNameTcs != null && !_personaNameTcs.Task.IsCompleted)
                 {
+                    Debug.WriteLine("Setting _personaNameTcs result");
                     _personaNameTcs.SetResult(_personaName);
                 }
+                else
+                {
+                    Debug.WriteLine("_personaNameTcs was null or already completed");
+                }
+            }
+            else
+            {
+                Debug.WriteLine("Persona state was for a different Steam ID, ignoring");
             }
         }
 

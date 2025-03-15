@@ -63,15 +63,6 @@ public partial class LoginPage : ContentPage
 
         _currentMethod = method;
 
-        // Update button states to show which is selected
-
-        //Old Ver
-        //SteamLoginButton.BackgroundColor = method == LoginMethod.Traditional
-        //    ? Colors.LightBlue : Colors.Gray;
-        //WebSessionButton.BackgroundColor = method == LoginMethod.SessionKey
-        //    ? Colors.LightBlue : Colors.Gray;
-        //QRCodeButton.BackgroundColor = method == LoginMethod.QRCode
-        //    ? Colors.LightBlue : Colors.Gray;
 
         //New Ver
         SteamLoginButton.BackgroundColor = method == LoginMethod.Traditional
@@ -105,45 +96,6 @@ public partial class LoginPage : ContentPage
     {
         SwitchLoginMethod(LoginMethod.QRCode);
     }
-
-    // Login button handlers - Pre MVVM Architecture
-
-    //private async void OnLoginButtonClicked(object sender, EventArgs e)
-    //{
-    //    if (string.IsNullOrEmpty(UsernameEntry.Text) || string.IsNullOrEmpty(PasswordEntry.Text))
-    //    {
-    //        await DisplayAlert("Error", "Username and password are required", "OK");
-    //        return;
-    //    }
-
-    //    // Here you would implement the actual Steam login logic using SteamKit2
-    //    // For now, we'll just show a success message and navigate to the main page
-    //    await DisplayAlert("Login", $"Logging in with username: {UsernameEntry.Text}", "OK");
-    //    await Shell.Current.GoToAsync("///MainPage");
-    //}
-
-    //private async void OnSessionKeyLoginClicked(object sender, EventArgs e)
-    //{
-    //    if (string.IsNullOrEmpty(SessionKeyEntry.Text))
-    //    {
-    //        await DisplayAlert("Error", "Session key is required", "OK");
-    //        return;
-    //    }
-
-    //    // Here you would implement the actual session key login logic
-    //    // For now, we'll just show a success message and navigate to the main page
-    //    await DisplayAlert("Login", "Logging in with session key", "OK");
-    //    await Shell.Current.GoToAsync("///MainPage");
-    //}
-
-    // Pre MVVM Architecture
-    //private async void OnQRLoginClicked(object sender, EventArgs e)
-    //{
-    //    // This would be triggered after QR code is scanned
-    //    // For now, we'll just show a message and navigate to the main page
-    //    await DisplayAlert("QR Login", "QR login successful", "OK");
-    //    await Shell.Current.GoToAsync("///MainPage");
-    //}
 
     private async void OnHelpButtonClicked(object sender, EventArgs e)
     {
@@ -181,17 +133,6 @@ public partial class LoginPage : ContentPage
         await DisplayAlert("Scan QR", "Camera functionality will be implemented later", "OK");
     }
 
-    // Pre MVVM Architecture
-    //private void GenerateQRCode()
-    //{
-    //    // In a real implementation, you would:
-    //    // 1. Call Steam API to generate a login token
-    //    // 2. Create a QR code from that token
-    //    // 3. Display it in the QRCodeImage
-
-    //    // For now, we'll just use a placeholder
-    //    QRCodeImage.Source = "qr_code_placeholder.png";
-    //}
 
 
 

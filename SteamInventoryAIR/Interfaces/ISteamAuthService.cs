@@ -13,7 +13,7 @@ namespace SteamInventoryAIR.Interfaces
         Task<bool> LoginWithQRCodeAsync(string qrToken);
         Task<string> GenerateQRCodeTokenAsync();
         Task<bool> IsLoggedInAsync();
-        Task LogoutAsync();
+        Task<bool> LogoutAsync();
 
         Task<string> GetPersonaNameAsync();
 
