@@ -116,7 +116,7 @@ namespace SteamInventoryAIR.ViewModels
 
             // IMPORTANT: This code loads debug credentials - REMOVE IN PRODUCTION
             // Load debug credentials asynchronously - don't wait for it here
-            _ = LoadDebugCredentialsAsync();
+            //_ = LoadDebugCredentialsAsync();
 
             TraditionalLoginCommand = new Command(async () => await ExecuteTraditionalLoginCommand());
             SessionKeyLoginCommand = new Command(async () => await ExecuteSessionKeyLoginCommand());
@@ -510,6 +510,8 @@ namespace SteamInventoryAIR.ViewModels
             }
         }
 
+        //FUTURE CHANGE: Make it so it waits for it to load environment variables not retrying multiple times
+        //Increase retryCount if not loading (sometimes it load in 3rd retry, sometimes it loads in 4th retry)
         public async Task LoadDebugCredentialsAsync(int retryCount = 4)
         {
             // IMPORTANT: This code is for debugging only and should be removed in production builds
@@ -538,8 +540,10 @@ namespace SteamInventoryAIR.ViewModels
             }
 
             // Log what values were loaded
-            Debug.WriteLine($"Final username value: {(string.IsNullOrEmpty(username) ? "empty" : "not empty")}");
-            Debug.WriteLine($"Final password value: {(string.IsNullOrEmpty(password) ? "empty" : "not empty")}");
+            Debug.WriteLine($"Final username value: {username}");
+            Debug.WriteLine($"Final password value: {password}");
+            Debug.WriteLine($"Final sessionKey value: {sessionKey}");
+
 
             // Set properties and force notification
             Username = username;
