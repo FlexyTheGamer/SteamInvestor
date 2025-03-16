@@ -141,10 +141,7 @@ public partial class LoginPage : ContentPage
 
         // Load debug credentials after the page is visible
         Debug.WriteLine("LoginPage OnAppearing - reloading debug credentials");
-        _viewModel.LoadDebugCredentials();
+        _ = _viewModel.LoadDebugCredentialsAsync();
     }
-
-
-
 
 }

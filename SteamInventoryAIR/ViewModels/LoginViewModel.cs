@@ -115,7 +115,8 @@ namespace SteamInventoryAIR.ViewModels
             _authService = authService;
 
             // IMPORTANT: This code loads debug credentials - REMOVE IN PRODUCTION
-            LoadDebugCredentials();
+            // Load debug credentials asynchronously - don't wait for it here
+            _ = LoadDebugCredentialsAsync();
 
             TraditionalLoginCommand = new Command(async () => await ExecuteTraditionalLoginCommand());
             SessionKeyLoginCommand = new Command(async () => await ExecuteSessionKeyLoginCommand());
@@ -509,19 +510,36 @@ namespace SteamInventoryAIR.ViewModels
             }
         }
 
-        public void LoadDebugCredentials()
+        public async Task LoadDebugCredentialsAsync(int retryCount = 4)
         {
             // IMPORTANT: This code is for debugging only and should be removed in production builds
             Debug.WriteLine("Loading debug credentials from environment variables");
 
-            // Load credentials from environment variables
-            string username = EnvironmentService.GetVariable("STEAM_DEBUG_USERNAME", "");
-            string password = EnvironmentService.GetVariable("STEAM_DEBUG_PASSWORD", "");
-            string sessionKey = EnvironmentService.GetVariable("STEAM_DEBUG_SESSION_KEY", "");
+            string username = "";
+            string password = "";
+            string sessionKey = "";
+
+            // Try multiple times with a short delay
+            for (int i = 0; i < retryCount; i++)
+            {
+                // Get values from environment
+                username = EnvironmentService.GetVariable("STEAM_DEBUG_USERNAME", "");
+                password = EnvironmentService.GetVariable("STEAM_DEBUG_PASSWORD", "");
+                sessionKey = EnvironmentService.GetVariable("STEAM_DEBUG_SESSION_KEY", "");
+
+                if (!string.IsNullOrEmpty(username) || !string.IsNullOrEmpty(password))
+                {
+                    Debug.WriteLine("Found credentials on try #" + (i + 1));
+                    break;
+                }
+
+                Debug.WriteLine($"Credentials not found yet, retrying in 500ms (attempt {i + 1}/{retryCount})");
+                await Task.Delay(500); // Wait half a second before trying again
+            }
 
             // Log what values were loaded
-            Debug.WriteLine($"Loaded username: {(string.IsNullOrEmpty(username) ? "empty" : "not empty")}");
-            Debug.WriteLine($"Loaded password: {(string.IsNullOrEmpty(password) ? "empty" : "not empty")}");
+            Debug.WriteLine($"Final username value: {(string.IsNullOrEmpty(username) ? "empty" : "not empty")}");
+            Debug.WriteLine($"Final password value: {(string.IsNullOrEmpty(password) ? "empty" : "not empty")}");
 
             // Set properties and force notification
             Username = username;
@@ -532,12 +550,8 @@ namespace SteamInventoryAIR.ViewModels
 
             SessionKey = sessionKey;
             OnPropertyChanged(nameof(SessionKey));
-
-            if (!string.IsNullOrEmpty(Username) || !string.IsNullOrEmpty(Password))
-            {
-                Debug.WriteLine("Debug credentials loaded successfully");
-            }
         }
+
 
     }
 }
