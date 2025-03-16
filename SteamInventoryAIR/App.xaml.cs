@@ -1,4 +1,5 @@
-﻿using SteamInventoryAIR.ViewModels;
+﻿using SteamInventoryAIR.Services;
+using SteamInventoryAIR.ViewModels;
 
 namespace SteamInventoryAIR
 {
@@ -8,19 +9,20 @@ namespace SteamInventoryAIR
         {
             InitializeComponent();
 
-            //MainPage = new AppShell(); - Old Project Introduction FormPage
+            // Load environment variables for debugging
+            EnvironmentService.LoadEnvironmentVariables();
 
+            //--------------------Testing purposes
+            ////Added for MVVM Architecture
+            //Routing.RegisterRoute(nameof(MainPage), typeof(MainPage));
 
-            //Pre MVVM Architecture
-            //MainPage = new LoginPage(); //Initially runs the specified form ?!
+            //MainPage = new NavigationPage(new LoginPage(
+            //    serviceProvider.GetService<LoginViewModel>()
+            //));
+            //--------------------Testing purposes
 
-
-            //Added for MVVM Architecture
-            Routing.RegisterRoute(nameof(MainPage), typeof(MainPage));
-
-            MainPage = new NavigationPage(new LoginPage(
-                serviceProvider.GetService<LoginViewModel>()
-            ));
+            // Use AppShell consistently
+            MainPage = new AppShell();
         }
     }
 }

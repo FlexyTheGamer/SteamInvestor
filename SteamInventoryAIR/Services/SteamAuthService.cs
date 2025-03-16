@@ -385,54 +385,6 @@ namespace SteamInventoryAIR.Services
             return false; // Was not logged in
         }
 
-        public async Task<string> GetPersonaNameAsync_OLD()
-        {
-            // If persona name is empty but we're logged in, try to get it again
-            if (string.IsNullOrEmpty(_personaName) && _isLoggedIn && _steamFriends != null)
-            {
-                try
-                {
-                    _personaName = _steamFriends.GetPersonaName();
-                    Debug.WriteLine($"Retrieved persona name in GetPersonaNameAsync: {_personaName}");
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Error getting persona name: {ex.Message}");
-                }
-            }
-
-            return _personaName ?? "Unknown User";
-        }
-        //old version above, new version below
-        public async Task<string> GetPersonaNameAsync_OLD_v2()
-        {
-            if (string.IsNullOrEmpty(_personaName) && _isLoggedIn)
-            {
-                // Create a new TaskCompletionSource if needed
-                _personaNameTcs = new TaskCompletionSource<string>();
-
-                // Request persona information
-                if (_steamId != null)
-                {
-                    _steamFriends.SetPersonaState(EPersonaState.Online);
-                    _steamFriends.RequestFriendInfo(_steamId, EClientPersonaStateFlag.PlayerName);
-                }
-
-                // Wait for the persona name to be set (with a reasonable timeout)
-                var timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
-                var completedTask = await Task.WhenAny(_personaNameTcs.Task, timeoutTask);
-
-                if (completedTask == timeoutTask)
-                {
-                    return "Unknown User"; // Timeout occurred
-                }
-
-                return await _personaNameTcs.Task; // Return the actual persona name
-            }
-
-            return _personaName ?? "Unknown User";
-        }
-        //old version above, new version below
         public async Task<string> GetPersonaNameAsync()
         {
             // If we already have a persona name, return it

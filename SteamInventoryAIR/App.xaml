@@ -15,6 +15,9 @@
 
             <converters:LoginStatusColorConverter x:Key="LoginStatusColorConverter"/>
 
+            <!-- Add this line to define the converter as a resource -->
+            <converters:IntEqualConverter x:Key="IntEqualConverter" />
+
         </ResourceDictionary>
     </Application.Resources>
 </Application>

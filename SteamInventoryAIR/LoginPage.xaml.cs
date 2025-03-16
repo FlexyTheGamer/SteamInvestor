@@ -5,6 +5,7 @@ using Microsoft.Maui.Controls;
 using SteamInventoryAIR.ViewModels;
 
 using Microsoft.Maui.ApplicationModel;
+using System.Diagnostics;
 
 public partial class LoginPage : ContentPage
 {
@@ -133,6 +134,15 @@ public partial class LoginPage : ContentPage
         await DisplayAlert("Scan QR", "Camera functionality will be implemented later", "OK");
     }
 
+    // In LoginPage.xaml.cs - add this in the OnAppearing method
+    protected override void OnAppearing()
+    {
+        base.OnAppearing();
+
+        // Load debug credentials after the page is visible
+        Debug.WriteLine("LoginPage OnAppearing - reloading debug credentials");
+        _viewModel.LoadDebugCredentials();
+    }
 
 
 

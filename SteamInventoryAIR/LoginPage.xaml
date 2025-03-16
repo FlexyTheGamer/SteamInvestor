@@ -60,8 +60,16 @@ Ctrl + K then Ctrl + C : Comments selected lines
             <Grid x:Name="TraditionalLoginTemplate" IsVisible="false">
 
                 <StackLayout Spacing="15" VerticalOptions="Center">
+                    <!--
                     <Entry Placeholder="Username" Text="{Binding Username}" Style="{StaticResource EntryStyle}"/>
                     <Entry Placeholder="Password" IsPassword="True" Text="{Binding Password}" Style="{StaticResource EntryStyle}"/>
+                    -->
+
+                    <!--Added Mode=TwoWay - establishes a bidirectional connection between a UI element and a data source property in your ViewModel -->
+                    <Entry Placeholder="Username" Text="{Binding Username, Mode=TwoWay}" Style="{StaticResource EntryStyle}"/>
+                    <Entry Placeholder="Password" IsPassword="True" Text="{Binding Password, Mode=TwoWay}" Style="{StaticResource EntryStyle}"/>
+
+                    
                     <Entry Placeholder="Authorization Code (Optional)" Text="{Binding AuthCode}" Style="{StaticResource EntryStyle}"/>
                     <Button Text="Login" Command="{Binding TraditionalLoginCommand}" Style="{StaticResource LoginButtonStyle}"/>
                 </StackLayout>

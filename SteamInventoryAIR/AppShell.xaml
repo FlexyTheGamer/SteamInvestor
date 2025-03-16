@@ -7,9 +7,16 @@
     Shell.FlyoutBehavior="Disabled"
     Title="SteamInventoryAIR">
 
+    <!-- Login route -->
     <ShellContent
-        Title="Home"
+        Route="login"
+        ContentTemplate="{DataTemplate local:LoginPage}"
+        Title="Login" />
+
+    <!-- Main route - hidden initially -->
+    <ShellContent
+        Route="main"
         ContentTemplate="{DataTemplate local:MainPage}"
-        Route="MainPage" />
+        Title="Main" />
 
 </Shell>

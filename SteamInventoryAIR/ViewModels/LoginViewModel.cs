@@ -6,6 +6,7 @@ using Microsoft.Maui.ApplicationModel;
 
 using QRCoder;
 using System.IO;
+using SteamInventoryAIR.Services;
 
 
 
@@ -113,6 +114,9 @@ namespace SteamInventoryAIR.ViewModels
             Title = "Login";
             _authService = authService;
 
+            // IMPORTANT: This code loads debug credentials - REMOVE IN PRODUCTION
+            LoadDebugCredentials();
+
             TraditionalLoginCommand = new Command(async () => await ExecuteTraditionalLoginCommand());
             SessionKeyLoginCommand = new Command(async () => await ExecuteSessionKeyLoginCommand());
             QrCodeLoginCommand = new Command(async () => await ExecuteQrCodeLoginCommand());
@@ -148,8 +152,15 @@ namespace SteamInventoryAIR.ViewModels
                     Password = string.Empty;
                     AuthCode = string.Empty;
 
-                    // TODO: Navigate to main page when ready
-                    // await Shell.Current.GoToAsync("///MainPage");
+
+                    // ADDED: Wait 2 seconds before navigating
+                    Debug.WriteLine("Login successful, waiting 2 seconds before navigating to MainPage...");
+                    await Task.Delay(2000);
+
+                    // ADDED: Navigate to MainPage
+                    // MODIFIED: Use proper Shell navigation
+                    Debug.WriteLine("Navigating to MainPage");
+                    await Shell.Current.GoToAsync("//main");
                 }
                 else
                 {
@@ -193,6 +204,7 @@ namespace SteamInventoryAIR.ViewModels
 
                     // Reset form fields
                     SessionKey = string.Empty;
+
                 }
                 else
                 {
@@ -494,6 +506,36 @@ namespace SteamInventoryAIR.ViewModels
                 Debug.WriteLine($"=== ERROR in RefreshQRCodeAsync: {ex.Message} ===");
                 Debug.WriteLine($"Exception type: {ex.GetType().Name}");
                 Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+            }
+        }
+
+        public void LoadDebugCredentials()
+        {
+            // IMPORTANT: This code is for debugging only and should be removed in production builds
+            Debug.WriteLine("Loading debug credentials from environment variables");
+
+            // Load credentials from environment variables
+            string username = EnvironmentService.GetVariable("STEAM_DEBUG_USERNAME", "");
+            string password = EnvironmentService.GetVariable("STEAM_DEBUG_PASSWORD", "");
+            string sessionKey = EnvironmentService.GetVariable("STEAM_DEBUG_SESSION_KEY", "");
+
+            // Log what values were loaded
+            Debug.WriteLine($"Loaded username: {(string.IsNullOrEmpty(username) ? "empty" : "not empty")}");
+            Debug.WriteLine($"Loaded password: {(string.IsNullOrEmpty(password) ? "empty" : "not empty")}");
+
+            // Set properties and force notification
+            Username = username;
+            OnPropertyChanged(nameof(Username));
+
+            Password = password;
+            OnPropertyChanged(nameof(Password));
+
+            SessionKey = sessionKey;
+            OnPropertyChanged(nameof(SessionKey));
+
+            if (!string.IsNullOrEmpty(Username) || !string.IsNullOrEmpty(Password))
+            {
+                Debug.WriteLine("Debug credentials loaded successfully");
             }
         }
 

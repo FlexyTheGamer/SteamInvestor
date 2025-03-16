@@ -363,3 +363,11 @@ MigrationBackup/
 FodyWeavers.xsd
 
 .idea/
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.*

@@ -30,9 +30,13 @@ namespace SteamInventoryAIR
 
             // Register ViewModels
             builder.Services.AddTransient<LoginViewModel>();
+            builder.Services.AddTransient<MainViewModel>();
 
             // Register Pages
             builder.Services.AddTransient<LoginPage>();
+            builder.Services.AddTransient<MainPage>();
+            builder.Services.AddTransient<AppShell>();
+
 
             //#if DEBUG
             //    		builder.Logging.AddDebug();
