@@ -41,10 +41,20 @@ namespace SteamInventoryAIR.ViewModels
             set => SetProperty(ref _welcomeMessage, value);
         }
 
+        private bool _isValueGraphSelected = true;
+        public bool IsValueGraphSelected
+        {
+            get => _isValueGraphSelected;
+            set => SetProperty(ref _isValueGraphSelected, value);
+        }
+
         // Commands for tab navigation
         public ICommand SelectHomeTabCommand { get; }
         public ICommand SelectListTabCommand { get; }
         public ICommand SelectMonitoringTabCommand { get; }
+        
+        public ICommand ToggleValueGraphCommand { get; }
+        public ICommand ToggleVolumeGraphCommand { get; }
 
         public MainViewModel(ISteamAuthService authService = null)
         {
@@ -72,6 +82,16 @@ namespace SteamInventoryAIR.ViewModels
             {
                 Debug.WriteLine("Monitoring tab selected");
                 SelectedTabIndex = 2;
+            });
+
+            ToggleValueGraphCommand = new Command(() => {
+                IsValueGraphSelected = true;
+                Debug.WriteLine("Value graph selected");
+            });
+
+            ToggleVolumeGraphCommand = new Command(() => {
+                IsValueGraphSelected = false;
+                Debug.WriteLine("Volume graph selected");
             });
 
             // Set default tab

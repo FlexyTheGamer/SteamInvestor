@@ -33,6 +33,30 @@ namespace SteamInventoryAIR
 
             Debug.WriteLine("MainPage initialized with auth service");
         }
+
+
+        protected override void OnAppearing()
+        {
+            base.OnAppearing();
+
+            // Connect Value/Volume toggle buttons
+            BTN_ValueToggle.Clicked += (s, e) => {
+                // Update visuals
+                BTN_ValueToggle.BackgroundColor = Color.FromArgb("#CC2424");
+                BTN_VolumeToggle.BackgroundColor = Color.FromArgb("#2A2E35");
+                // Trigger command
+                _viewModel.ToggleValueGraphCommand.Execute(null);
+            };
+
+            BTN_VolumeToggle.Clicked += (s, e) => {
+                // Update visuals
+                BTN_ValueToggle.BackgroundColor = Color.FromArgb("#2A2E35");
+                BTN_VolumeToggle.BackgroundColor = Color.FromArgb("#CC2424");
+                // Trigger command
+                _viewModel.ToggleVolumeGraphCommand.Execute(null);
+            };
+        }
+
     }
 
 }
