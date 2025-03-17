@@ -8,35 +8,36 @@
              BackgroundColor="#1B1E23">
 
     <Grid RowDefinitions="Auto, *, 60">
-        <!-- Top Section with Welcome and Buttons -->
-        <Grid Grid.Row="0" RowDefinitions="Auto, Auto" Margin="15,10,15,5">
+        <!-- Top Section - Only visible on home tab -->
+        <Grid Grid.Row="0" RowDefinitions="Auto, Auto" Margin="15,10,15,5"
+              IsVisible="{Binding SelectedTabIndex, Converter={StaticResource IntEqualConverter}, ConverterParameter=0}">
             <!-- User Info and Welcome -->
-            <Grid Grid.Row="0" ColumnDefinitions="Auto, *" IsVisible="{Binding SelectedTabIndex, Converter={StaticResource IntEqualConverter}, ConverterParameter=0}">
+            <Grid Grid.Row="0" ColumnDefinitions="Auto, *">
                 <!-- User Profile Image -->
                 <Border Grid.Column="0" WidthRequest="50" HeightRequest="50" 
-                        StrokeShape="RoundRectangle 25" 
-                        StrokeThickness="1" Stroke="Gray">
+                       StrokeShape="RoundRectangle 25" 
+                       StrokeThickness="1" Stroke="Gray">
                     <Image x:Name="IMG_UserProfile" Source="dotnet_bot.png" 
-               Aspect="AspectFill" WidthRequest="45" HeightRequest="45" />
+                           Aspect="AspectFill" WidthRequest="45" HeightRequest="45" />
                 </Border>
 
                 <!-- Welcome Message -->
                 <Label x:Name="LB_WelcomeMessage" Grid.Column="1" 
-                       Text="👋 Hello, {Binding WelcomeMessage}" 
-                       TextColor="White" FontSize="20" 
+                       Text="{Binding WelcomeMessage, StringFormat='👋 {0}'}" 
+                       TextColor="White" FontSize="25" 
                        VerticalOptions="Center" Margin="15,0,0,0" />
             </Grid>
 
             <!-- Settings and Filter Buttons -->
             <Grid Grid.Row="1" ColumnDefinitions="*, *" Margin="0,15,0,5">
-                <Button x:Name="BTN_Settings" Grid.Column="0" Text="⚙️ Settings" 
+                <Button x:Name="BTN_Settings" Grid.Column="0" Text="⚙️" 
                         BackgroundColor="#2A2E35" TextColor="White" 
-                        HorizontalOptions="Start" WidthRequest="130" 
+                        HorizontalOptions="Start" WidthRequest="70" FontSize="25" 
                         HeightRequest="40" />
 
-                <Button x:Name="BTN_Filter" Grid.Column="1" Text="🔍 Filter" 
-                        BackgroundColor="#2A2E35" TextColor="White" 
-                        HorizontalOptions="End" WidthRequest="130" 
+                <Button x:Name="BTN_Filter" Grid.Column="1" Text="🛠️" 
+                        BackgroundColor="#2A2E35" TextColor="White" FontSize="25" 
+                        HorizontalOptions="End" WidthRequest="70" 
                         HeightRequest="40" />
             </Grid>
         </Grid>
@@ -45,38 +46,45 @@
         <Grid Grid.Row="1">
             <!-- Home Tab Content -->
             <StackLayout x:Name="HomeTabContent" IsVisible="{Binding SelectedTabIndex, Converter={StaticResource IntEqualConverter}, ConverterParameter=0}" Margin="15,0,15,0">
-                <Label Text="Inventory Value" TextColor="White" Margin="0,10,0,5"/>
-                <Border StrokeThickness="1" Stroke="Gray" StrokeShape="RoundRectangle 5">
-                    <Label x:Name="LB_InventoryValue" Text="{Binding InventoryValue}" 
-                           TextColor="Red" FontSize="20" HorizontalTextAlignment="Center" 
-                           VerticalTextAlignment="Center" Padding="10"/>
-                </Border>
+                <!-- Value and Quantity in same line -->
+                <Grid ColumnDefinitions="*, *" Margin="0,15,0,15">
+                    <StackLayout Grid.Column="0" Margin="0,0,5,0">
+                        <Label Text="Inventory Value" TextColor="White" HorizontalOptions="Start" FontSize="20" Margin="0,0,0,5"/>
+                        <Border StrokeThickness="1" Stroke="Gray" StrokeShape="RoundRectangle 5">
+                            <Label x:Name="LB_InventoryValue" Text="{Binding InventoryValue}" 
+                                   TextColor="Red" FontSize="25" HorizontalTextAlignment="Center" 
+                                   VerticalTextAlignment="Center" Padding="10"/>
+                        </Border>
+                    </StackLayout>
 
-                <Label Text="Inventory item quantity" TextColor="White" Margin="0,15,0,5"/>
-                <Border StrokeThickness="1" Stroke="Gray" StrokeShape="RoundRectangle 5">
-                    <Label x:Name="LB_InventoryQuantity" Text="{Binding InventoryItemQuantity}" 
-                           TextColor="Red" FontSize="20" HorizontalTextAlignment="Center" 
-                           VerticalTextAlignment="Center" Padding="10"/>
-                </Border>
+                    <StackLayout Grid.Column="1" Margin="5,0,0,0">
+                        <Label Text="Inventory Item Quantity" TextColor="White" HorizontalOptions="Start" FontSize="20" Margin="0,0,0,5"/>
+                        <Border StrokeThickness="1" Stroke="Gray" StrokeShape="RoundRectangle 5">
+                            <Label x:Name="LB_InventoryQuantity" Text="{Binding InventoryItemQuantity}" 
+                                   TextColor="Red" FontSize="25" HorizontalTextAlignment="Center" 
+                                   VerticalTextAlignment="Center" Padding="10"/>
+                        </Border>
+                    </StackLayout>
+                </Grid>
 
                 <!-- Graph Toggle Buttons -->
-                <Grid ColumnDefinitions="*, *" Margin="0,15,0,10">
+                <Grid ColumnDefinitions="*, *" Margin="0,0,0,5">
                     <Button x:Name="BTN_ValueToggle" Grid.Column="0" Text="Value" 
                             BackgroundColor="#CC2424" TextColor="White" 
-                            CornerRadius="5" Margin="0,0,5,0"/>
+                            CornerRadius="5" Margin="0,0,5,0" FontSize="20"/>
 
                     <Button x:Name="BTN_VolumeToggle" Grid.Column="1" Text="Volume" 
                             BackgroundColor="#2A2E35" TextColor="White" 
-                            CornerRadius="5" Margin="5,0,0,0"/>
+                            CornerRadius="5" Margin="5,0,0,0" FontSize="20"/>
                 </Grid>
 
-                <Label Text="Column Chart Graph" TextColor="White" Margin="0,10,0,5"/>
+                <Label Text="Column Chart Graph" TextColor="White" FontSize="20" Margin="0,10,0,5"/>
                 <Border StrokeThickness="1" Stroke="Gray" StrokeShape="RoundRectangle 5" HeightRequest="150">
                     <Label Text="Column Chart Placeholder" TextColor="Gray" 
                            HorizontalTextAlignment="Center" VerticalTextAlignment="Center"/>
                 </Border>
 
-                <Label Text="Pie Chart Graph" TextColor="White" Margin="0,15,0,5"/>
+                <Label Text="Pie Chart Graph" TextColor="White" FontSize="20" Margin="0,15,0,5"/>
                 <Border StrokeThickness="1" Stroke="Gray" StrokeShape="RoundRectangle 5" HeightRequest="150">
                     <Label Text="Pie Chart Placeholder" TextColor="Gray" 
                            HorizontalTextAlignment="Center" VerticalTextAlignment="Center"/>
@@ -86,120 +94,177 @@
             <!-- Inventory List Tab Content -->
             <Grid x:Name="ListTabContent" IsVisible="{Binding SelectedTabIndex, Converter={StaticResource IntEqualConverter}, ConverterParameter=1}" Margin="15,10,15,0" RowDefinitions="Auto, *">
                 <!-- Search and Filter Controls -->
-                <Grid Grid.Row="0" ColumnDefinitions="Auto, *" Margin="0,0,0,10">
-                    <Button x:Name="BTN_ListFilter" Grid.Column="0" Text="🔍" 
-                            BackgroundColor="#2A2E35" TextColor="White" 
-                            WidthRequest="50" HeightRequest="50" Margin="0,0,10,0"/>
-
-                    <SearchBar x:Name="TB_Search" Grid.Column="1" Placeholder="Search" 
+                <Grid Grid.Row="0" ColumnDefinitions="*, Auto, Auto" Margin="0,0,0,10">
+                    <SearchBar x:Name="TB_Search" Grid.Column="0" Placeholder="Search" 
                               BackgroundColor="#2A2E35" TextColor="White" 
                               PlaceholderColor="#AAAAAA"/>
+
+                    <Button x:Name="BTN_ListSearch" Grid.Column="1" Text="🔍" 
+                            BackgroundColor="#2A2E35" TextColor="White" 
+                            WidthRequest="50" HeightRequest="50" Margin="10,0,0,0"/>
+
+                    <Button x:Name="BTN_ListFilter" Grid.Column="2" Text="🛠️" 
+                            BackgroundColor="#2A2E35" TextColor="White" 
+                            WidthRequest="50" HeightRequest="50" Margin="10,0,0,0"/>
                 </Grid>
 
-                <!-- Inventory Items List -->
-                <ScrollView Grid.Row="1">
-                    <StackLayout Spacing="10">
-                        <!-- Inventory Item Template -->
-                        <Border StrokeThickness="1" Stroke="Gray" StrokeShape="RoundRectangle 5">
-                            <Grid ColumnDefinitions="Auto, *, Auto" Padding="10" HeightRequest="80">
-                                <Image Grid.Column="0" Source="dotnet_bot.png" 
-                                       HeightRequest="60" WidthRequest="60" 
-                                       VerticalOptions="Center"/>
 
-                                <StackLayout Grid.Column="1" HorizontalOptions="Center" 
-                                             VerticalOptions="Center" Spacing="5">
-                                    <Label Text="Item #1 Name" TextColor="White" 
-                                           FontSize="18" HorizontalTextAlignment="Center"/>
+                <!-- Replacing deprecated VerticalOptions="FillAndExpand" pattern -->
+                <Grid Grid.Row="1" RowDefinitions="*">
+                    <ScrollView Grid.Row="0">
+                        <VerticalStackLayout Spacing="10">
+                            <!-- Inventory Item Template -->
+                            <Border StrokeThickness="1" Stroke="Gray" StrokeShape="RoundRectangle 5">
+                                <Grid ColumnDefinitions="Auto, *, Auto" Padding="10" HeightRequest="80">
+                                    <Image Grid.Column="0" Source="dotnet_bot.png" 
+                                           HeightRequest="100" WidthRequest="100" 
+                                           VerticalOptions="Center"/>
 
-                                    <Grid ColumnDefinitions="*, *" HorizontalOptions="Center">
-                                        <Label Grid.Column="0" Text="Quantity: 5" TextColor="Gray" 
-                                               FontSize="14" Margin="0,0,10,0"/>
-                                        <Label Grid.Column="1" Text="Price: 15.50 €" TextColor="Gray" 
-                                               FontSize="14" Margin="10,0,0,0"/>
-                                    </Grid>
-                                </StackLayout>
+                                    <StackLayout Grid.Column="1" HorizontalOptions="Center" 
+                                                 VerticalOptions="Center" Spacing="5">
+                                        <Label Text="Item #1 Name" TextColor="White" 
+                                               FontSize="18" HorizontalTextAlignment="Center"/>
 
-                                <Button Grid.Column="2" Text="⬇️" BackgroundColor="Transparent" 
-                                        TextColor="White" WidthRequest="40" 
-                                        VerticalOptions="Center"/>
-                            </Grid>
-                        </Border>
+                                        <Grid ColumnDefinitions="*, *" HorizontalOptions="Center">
+                                            <Label Grid.Column="0" Text="Quantity: 5" TextColor="Gray" 
+                                                   FontSize="14" Margin="0,0,10,0"/>
+                                            <Label Grid.Column="1" Text="Price: 15.50 €" TextColor="Gray" 
+                                                   FontSize="14" Margin="10,0,0,0"/>
+                                        </Grid>
+                                    </StackLayout>
 
-                        <!-- Additional item placeholders would go here -->
-                    </StackLayout>
-                </ScrollView>
+                                    <Button Grid.Column="2" Text="⬇" FontSize="20" BackgroundColor="#2A2E35" 
+                                            TextColor="White" WidthRequest="50" 
+                                            VerticalOptions="Center"/>
+                                </Grid>
+                            </Border>
+
+                            <!-- Additional item placeholder for scrolling demo -->
+                            <Border StrokeThickness="1" Stroke="Gray" StrokeShape="RoundRectangle 5">
+                                <Grid ColumnDefinitions="Auto, *, Auto" Padding="10" HeightRequest="80">
+                                    <Image Grid.Column="0" Source="dotnet_bot.png" 
+                                           HeightRequest="100" WidthRequest="100" 
+                                           VerticalOptions="Center"/>
+
+                                    <StackLayout Grid.Column="1" HorizontalOptions="Center" 
+                                                 VerticalOptions="Center" Spacing="5">
+                                        <Label Text="Item #2 Name" TextColor="White" 
+                                               FontSize="18" HorizontalTextAlignment="Center"/>
+
+                                        <Grid ColumnDefinitions="*, *" HorizontalOptions="Center">
+                                            <Label Grid.Column="0" Text="Quantity: 3" TextColor="Gray" 
+                                                   FontSize="14" Margin="0,0,10,0"/>
+                                            <Label Grid.Column="1" Text="Price: 25.75 €" TextColor="Gray" 
+                                                   FontSize="14" Margin="10,0,0,0"/>
+                                        </Grid>
+                                    </StackLayout>
+
+                                    <Button Grid.Column="2" Text="⬇️" FontSize="20" BackgroundColor="#2A2E35" 
+                                            TextColor="White" WidthRequest="50" 
+                                            VerticalOptions="Center"/>
+                                </Grid>
+                            </Border>
+                        </VerticalStackLayout>
+                    </ScrollView>
+                </Grid>
             </Grid>
 
             <!-- Monitoring Tab Content -->
             <Grid x:Name="MonitoringTabContent" IsVisible="{Binding SelectedTabIndex, Converter={StaticResource IntEqualConverter}, ConverterParameter=2}" Margin="15,10,15,0" RowDefinitions="Auto, Auto, *">
                 <!-- Search and Filter Controls -->
-                <Grid Grid.Row="0" ColumnDefinitions="Auto, *" Margin="0,0,0,10">
-                    <Button x:Name="BTN_MonitoringFilter" Grid.Column="0" Text="🔍" 
-                            BackgroundColor="#2A2E35" TextColor="White" 
-                            WidthRequest="50" HeightRequest="50" Margin="0,0,10,0"/>
-
-                    <SearchBar x:Name="TB_SearchMonitoring" Grid.Column="1" Placeholder="Search" 
+                <Grid Grid.Row="0" ColumnDefinitions="*, Auto, Auto" Margin="0,0,0,10">
+                    <SearchBar x:Name="TB_SearchMonitoring" Grid.Column="0" Placeholder="Search" 
                               BackgroundColor="#2A2E35" TextColor="White" 
                               PlaceholderColor="#AAAAAA"/>
+
+                    <Button x:Name="BTN_MonitoringSearch" Grid.Column="1" Text="🔍" 
+                            BackgroundColor="#2A2E35" TextColor="White" 
+                            WidthRequest="50" HeightRequest="50" Margin="10,0,0,0"/>
+
+                    <Button x:Name="BTN_MonitoringFilter" Grid.Column="2" Text="🛠️" 
+                            BackgroundColor="#2A2E35" TextColor="White" 
+                            WidthRequest="50" HeightRequest="50" Margin="10,0,0,0"/>
                 </Grid>
 
-                <!-- Monitoring Action Buttons -->
-                <Grid Grid.Row="1" ColumnDefinitions="*, *" Margin="50,5,50,15">
-                    <Button x:Name="BTN_AddMonitoring" Grid.Column="0" Text="➕ Add" 
+
+                <!-- Monitoring Action Buttons - Full Width -->
+                <Grid Grid.Row="1" ColumnDefinitions="*, *" Margin="0,5,0,15">
+                    <Button x:Name="BTN_AddMonitoring" Grid.Column="0" Text="➕ Add" FontSize="20"
                             BackgroundColor="#2A2E35" TextColor="White" 
                             HorizontalOptions="Fill" Margin="0,0,5,0"/>
 
-                    <Button x:Name="BTN_AlertMonitoring" Grid.Column="1" Text="🔔 Alerts" 
+                    <Button x:Name="BTN_AlertMonitoring" Grid.Column="1" Text="🔔 Alerts" FontSize="20"
                             BackgroundColor="#2A2E35" TextColor="White" 
                             HorizontalOptions="Fill" Margin="5,0,0,0"/>
                 </Grid>
 
-                <!-- Monitored Items List -->
-                <ScrollView Grid.Row="2">
-                    <StackLayout Spacing="10">
-                        <!-- Monitored Item Template -->
-                        <Border StrokeThickness="1" Stroke="Gray" StrokeShape="RoundRectangle 5">
-                            <Grid ColumnDefinitions="Auto, *, Auto" Padding="10" HeightRequest="80">
-                                <Image Grid.Column="0" Source="dotnet_bot.png" 
-                                       HeightRequest="60" WidthRequest="60" 
-                                       VerticalOptions="Center"/>
+                <!-- Replacing deprecated VerticalOptions="FillAndExpand" pattern -->
+                <Grid Grid.Row="2" RowDefinitions="*">
+                    <ScrollView Grid.Row="0">
+                        <VerticalStackLayout Spacing="10">
+                            <!-- Monitored Item Template -->
+                            <Border StrokeThickness="1" Stroke="Gray" StrokeShape="RoundRectangle 5">
+                                <Grid ColumnDefinitions="Auto, *, Auto" Padding="10" HeightRequest="80">
+                                    <Image Grid.Column="0" Source="dotnet_bot.png" 
+                                           HeightRequest="100" WidthRequest="100" 
+                                           VerticalOptions="Center"/>
 
-                                <StackLayout Grid.Column="1" HorizontalOptions="Center" 
-                                             VerticalOptions="Center" Spacing="5">
-                                    <Label Text="[Monitoring Item #1 Name]" TextColor="White" 
-                                           FontSize="18" HorizontalTextAlignment="Center"/>
-                                    <Label Text="[Monitoring Item #1 Current Price] €" TextColor="Gray" 
-                                           FontSize="14" HorizontalTextAlignment="Center"/>
-                                </StackLayout>
+                                    <StackLayout Grid.Column="1" HorizontalOptions="Center" 
+                                                 VerticalOptions="Center" Spacing="5">
+                                        <Label Text="[Monitoring Item #1 Name]" TextColor="White" 
+                                               FontSize="18" HorizontalTextAlignment="Center"/>
+                                        <Label Text="[Monitoring Item #1 Current Price] €" TextColor="Gray" 
+                                               FontSize="14" HorizontalTextAlignment="Center"/>
+                                    </StackLayout>
 
-                                <Button Grid.Column="2" Text="⬇️" BackgroundColor="Transparent" 
-                                        TextColor="White" WidthRequest="40" 
-                                        VerticalOptions="Center"/>
-                            </Grid>
-                        </Border>
+                                    <Button Grid.Column="2" Text="⬇️" FontSize="20" BackgroundColor="#2A2E35"  
+                                            TextColor="White" WidthRequest="40" 
+                                            VerticalOptions="Center"/>
+                                </Grid>
+                            </Border>
 
-                        <!-- Additional monitored items would go here -->
-                    </StackLayout>
-                </ScrollView>
+                            <!-- Additional monitored item for scrolling demo -->
+                            <Border StrokeThickness="1" Stroke="Gray" StrokeShape="RoundRectangle 5">
+                                <Grid ColumnDefinitions="Auto, *, Auto" Padding="10" HeightRequest="80">
+                                    <Image Grid.Column="0" Source="dotnet_bot.png" 
+                                           HeightRequest="100" WidthRequest="100" 
+                                           VerticalOptions="Center"/>
+
+                                    <StackLayout Grid.Column="1" HorizontalOptions="Center" 
+                                                 VerticalOptions="Center" Spacing="5">
+                                        <Label Text="[Monitoring Item #2 Name]" TextColor="White" 
+                                               FontSize="18" HorizontalTextAlignment="Center"/>
+                                        <Label Text="[Monitoring Item #2 Current Price] €" TextColor="Gray" 
+                                               FontSize="14" HorizontalTextAlignment="Center"/>
+                                    </StackLayout>
+
+                                    <Button Grid.Column="2" Text="⬇️" FontSize="20" BackgroundColor="#2A2E35" 
+                                            TextColor="White" WidthRequest="40" 
+                                            VerticalOptions="Center"/>
+                                </Grid>
+                            </Border>
+                        </VerticalStackLayout>
+                    </ScrollView>
+                </Grid>
             </Grid>
         </Grid>
 
         <!-- Tab Bar -->
         <Grid Grid.Row="2" ColumnDefinitions="*, *, *" BackgroundColor="#2A2E35">
             <Button x:Name="BTN_HomeTab" Grid.Column="0" Text="🏠" 
-            Command="{Binding SelectHomeTabCommand}"
-            BackgroundColor="{Binding SelectedTabIndex, Converter={StaticResource IntEqualConverter}, ConverterParameter='0,#CC2424,#2A2E35'}"
-            TextColor="White" FontSize="24"/>
+                    Command="{Binding SelectHomeTabCommand}"
+                    BackgroundColor="{Binding SelectedTabIndex, Converter={StaticResource IntEqualConverter}, ConverterParameter='0,#CC2424,#2A2E35'}"
+                    TextColor="White" FontSize="24"/>
 
             <Button x:Name="BTN_ListTab" Grid.Column="1" Text="📋" 
-            Command="{Binding SelectListTabCommand}"
-            BackgroundColor="{Binding SelectedTabIndex, Converter={StaticResource IntEqualConverter}, ConverterParameter='1,#CC2424,#2A2E35'}"
-            TextColor="White" FontSize="24"/>
+                    Command="{Binding SelectListTabCommand}"
+                    BackgroundColor="{Binding SelectedTabIndex, Converter={StaticResource IntEqualConverter}, ConverterParameter='1,#CC2424,#2A2E35'}"
+                    TextColor="White" FontSize="24"/>
 
             <Button x:Name="BTN_MonitoringTab" Grid.Column="2" Text="👀" 
-            Command="{Binding SelectMonitoringTabCommand}"
-            BackgroundColor="{Binding SelectedTabIndex, Converter={StaticResource IntEqualConverter}, ConverterParameter='2,#CC2424,#2A2E35'}"
-            TextColor="White" FontSize="24"/>
+                    Command="{Binding SelectMonitoringTabCommand}"
+                    BackgroundColor="{Binding SelectedTabIndex, Converter={StaticResource IntEqualConverter}, ConverterParameter='2,#CC2424,#2A2E35'}"
+                    TextColor="White" FontSize="24"/>
         </Grid>
     </Grid>
 </ContentPage>
