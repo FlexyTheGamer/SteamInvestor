@@ -174,12 +174,12 @@ namespace SteamInventoryAIR.ViewModels
                 IsLoadingInventory = true;
                 InventoryStatus = "Loading inventory...";
 
+                // Use the Trading API method instead of the public API
+                var items = await _authService.GetInventoryViaTradingAPIAsync();
 
-                var items = await _authService.GetInventoryViaWebAPIAsync();
+                Debug.WriteLine($"LoadInventoryAsync: Retrieved {items?.Count() ?? 0} items via Trading API");
 
-                Debug.WriteLine($"LoadInventoryAsync: Retrieved {items?.Count() ?? 0} items via authenticated session");
-
-                // Update the ObservableCollection
+                // Rest of your existing code...
                 InventoryItems.Clear();
                 if (items != null)
                 {
@@ -199,12 +199,6 @@ namespace SteamInventoryAIR.ViewModels
                     }
                     InventoryItemQuantity = items.Count().ToString();
                     InventoryStatus = $"Loaded {items.Count()} items";
-
-                    // Debug output for all items
-                    foreach (var item in items)
-                    {
-                        Debug.WriteLine($"Item: {item}");
-                    }
                 }
                 else
                 {
@@ -212,8 +206,6 @@ namespace SteamInventoryAIR.ViewModels
                     InventoryItemQuantity = "0";
                     InventoryStatus = items?.Any() == false ? "No items found" : "Failed to load inventory";
                 }
-
-                Debug.WriteLine($"LoadInventoryAsync: Updated inventory values: {InventoryValue}, {InventoryItemQuantity}");
             }
             catch (Exception ex)
             {
@@ -225,6 +217,7 @@ namespace SteamInventoryAIR.ViewModels
                 IsLoadingInventory = false;
             }
         }
+
 
 
 

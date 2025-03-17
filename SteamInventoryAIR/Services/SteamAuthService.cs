@@ -16,7 +16,8 @@ using SteamInventoryAIR.Models;
 using System.Net.Http;
 
 using SteamKit2.GC; // Add this line to include the GameCoordinator namespace
-using SteamKit2.GC.CSGO.Internal; // Add this line to include the CSGO namespace
+using SteamKit2.GC.CSGO.Internal;
+using System.Net; // Add this line to include the CSGO namespace
 
 namespace SteamInventoryAIR.Services
 {
@@ -61,6 +62,9 @@ namespace SteamInventoryAIR.Services
 
         private TaskCompletionSource<string> _qrCodeTcs;
 
+
+        private CookieContainer _steamCookies;
+        private string _steamSessionId;
 
 
         public SteamAuthService()
@@ -632,7 +636,7 @@ namespace SteamInventoryAIR.Services
             }
         }
 
-        private void OnLoggedOn(SteamUser.LoggedOnCallback callback)
+        private async void OnLoggedOn(SteamUser.LoggedOnCallback callback)
         {
 
             Debug.WriteLine($"=== OnLoggedOn: Received login result: {callback.Result} ===");
@@ -672,19 +676,20 @@ namespace SteamInventoryAIR.Services
                 return;
             }
 
+            // If we get here, login was successful
             Debug.WriteLine("Successfully logged in to Steam");
             _isLoggedIn = true;
             _steamId = callback.ClientSteamID;
             Debug.WriteLine($"Logged in as Steam ID: {_steamId}");
 
+            // Get web session after successful login - CRITICAL for inventory access
+            Debug.WriteLine("Getting web session immediately after login");
+            await GetWebSession(); // Wait for the session to be established
 
             // Request persona information
             Debug.WriteLine($"Setting persona state and requesting info for {_steamId}");
-
-            // Get persona name after successful login
-            // Important: We need to wait a moment for Steam to initialize the friends list
             _steamFriends.SetPersonaState(EPersonaState.Online);
-            _steamFriends.RequestFriendInfo(_steamId, EClientPersonaStateFlag.PlayerName); // ??????????
+            _steamFriends.RequestFriendInfo(_steamId, EClientPersonaStateFlag.PlayerName);
 
             if (_loginTcs != null && !_loginTcs.Task.IsCompleted)
             {
@@ -977,6 +982,422 @@ namespace SteamInventoryAIR.Services
             }
         }
 
+
+
+        public async Task<IEnumerable<Models.InventoryItem>> GetInventoryViaTradingAPIAsync(uint appId = 730, uint contextId = 2)
+        {
+            Debug.WriteLine("=== GetInventoryViaTradingAPIAsync: Using Trading API ===");
+
+            if (!_isLoggedIn || _steamId == null)
+            {
+                Debug.WriteLine("GetInventoryViaTradingAPIAsync: Not logged in or Steam ID is null");
+                return new List<Models.InventoryItem>();
+            }
+
+            if (_steamCookies == null)
+            {
+                Debug.WriteLine("GetInventoryViaTradingAPIAsync: Web session not available - requesting now");
+                await GetWebSession();
+
+                if (_steamCookies == null)
+                {
+                    Debug.WriteLine("GetInventoryViaTradingAPIAsync: Still no valid session - falling back to public API");
+                    return await GetInventoryAsync(appId, contextId);
+                }
+            }
+
+            try
+            {
+                var steamId64 = _steamId.ConvertToUInt64();
+                Debug.WriteLine($"GetInventoryViaTradingAPIAsync: Using Steam ID: {steamId64}");
+
+                using (var handler = new HttpClientHandler
+                {
+                    CookieContainer = _steamCookies,
+                    AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+                })
+                using (var httpClient = new HttpClient(handler))
+                {
+                    // Add necessary headers to simulate browser request
+                    httpClient.DefaultRequestHeaders.Add("User-Agent",
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
+                    httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
+                    httpClient.DefaultRequestHeaders.Add("Referer", $"https://steamcommunity.com/profiles/{steamId64}/inventory/");
+
+                    // Try multiple URL formats
+                    List<string> urlsToTry = new List<string>
+            {
+                // Direct inventory API with more flags
+                $"https://steamcommunity.com/inventory/{steamId64}/{appId}/{contextId}?l=english&count=5000&norender=1",
+                
+                // Private inventory format 
+                $"https://steamcommunity.com/profiles/{steamId64}/inventory/json/{appId}/{contextId}?l=english&trading=1",
+                
+                // Trade offer format
+                $"https://steamcommunity.com/tradeoffer/new/partnerinventory/?sessionid={_steamSessionId}&partner={steamId64}&appid={appId}&contextid={contextId}"
+            };
+
+                    foreach (var url in urlsToTry)
+                    {
+                        Debug.WriteLine($"GetInventoryViaTradingAPIAsync: Trying URL: {url}");
+
+                        try
+                        {
+                            var response = await httpClient.GetAsync(url);
+                            Debug.WriteLine($"GetInventoryViaTradingAPIAsync: URL {url} returned status {response.StatusCode}");
+
+                            if (response.IsSuccessStatusCode)
+                            {
+                                var content = await response.Content.ReadAsStringAsync();
+                                Debug.WriteLine($"GetInventoryViaTradingAPIAsync: Response length: {content.Length} bytes");
+
+                                // Determine which parser to use based on response format
+                                if (content.Contains("\"rgInventory\""))
+                                {
+                                    Debug.WriteLine("GetInventoryViaTradingAPIAsync: Using trading inventory parser");
+                                    return ParseTradingInventoryResponse(content);
+                                }
+                                else if (content.Contains("\"assets\""))
+                                {
+                                    Debug.WriteLine("GetInventoryViaTradingAPIAsync: Using standard inventory parser");
+                                    return ParseInventoryHttpResponse(content);
+                                }
+                                else
+                                {
+                                    Debug.WriteLine("GetInventoryViaTradingAPIAsync: Unknown response format");
+                                    Debug.WriteLine($"Response starts with: {content.Substring(0, Math.Min(100, content.Length))}");
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"GetInventoryViaTradingAPIAsync: Error with URL {url}: {ex.Message}");
+                        }
+                    }
+
+                    Debug.WriteLine("GetInventoryViaTradingAPIAsync: All URLs failed, falling back to public API");
+                    return await GetInventoryAsync(appId, contextId);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"=== ERROR in GetInventoryViaTradingAPIAsync: {ex.Message} ===");
+                Debug.WriteLine($"Exception type: {ex.GetType().Name}");
+                Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+
+                return await GetInventoryAsync(appId, contextId);
+            }
+        }
+
+
+
+
+
+
+        private IEnumerable<Models.InventoryItem> ParseTradingInventoryResponse(string jsonResponse)
+        {
+            Debug.WriteLine("ParseTradingInventoryResponse: Parsing Trading API response");
+            var items = new List<Models.InventoryItem>();
+
+            try
+            {
+                // Parse the JSON response
+                var responseObj = JsonSerializer.Deserialize<JsonElement>(jsonResponse);
+
+                // Trading API has a different structure than public inventory API
+                if (responseObj.TryGetProperty("rgInventory", out var inventoryProp) &&
+                    responseObj.TryGetProperty("rgDescriptions", out var descriptionsProp))
+                {
+                    Debug.WriteLine("ParseTradingInventoryResponse: Successfully found inventory and descriptions");
+
+                    // Extract items from rgInventory
+                    var inventoryDict = inventoryProp.EnumerateObject().ToDictionary(p => p.Name, p => p.Value);
+                    var descriptionsDict = descriptionsProp.EnumerateObject().ToDictionary(p => p.Name, p => p.Value);
+
+                    foreach (var invItem in inventoryDict)
+                    {
+                        var assetId = invItem.Value.GetProperty("id").GetString();
+                        var classId = invItem.Value.GetProperty("classid").GetString();
+                        var instanceId = invItem.Value.GetProperty("instanceid").GetString();
+
+                        // Find matching description using classid_instanceid as key
+                        var descKey = $"{classId}_{instanceId}";
+
+                        if (descriptionsDict.TryGetValue(descKey, out var description))
+                        {
+                            var item = new Models.InventoryItem
+                            {
+                                AssetId = assetId,
+                                Name = description.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : "Unknown",
+                                MarketHashName = description.TryGetProperty("market_hash_name", out var hashNameProp) ? hashNameProp.GetString() : "Unknown",
+                                IconUrl = description.TryGetProperty("icon_url", out var iconUrlProp) ?
+                                    $"https://steamcommunity-a.akamaihd.net/economy/image/{iconUrlProp.GetString()}" : null,
+                                // For now, set default market value
+                                MarketValue = 0.0M
+                            };
+
+                            // Parse tags for rarity, quality, etc.
+                            if (description.TryGetProperty("tags", out var tagsProp))
+                            {
+                                foreach (var tag in tagsProp.EnumerateArray())
+                                {
+                                    string category = tag.GetProperty("category").GetString();
+                                    string value = tag.GetProperty("localized_tag_name").GetString();
+
+                                    switch (category)
+                                    {
+                                        case "Rarity":
+                                            item.Rarity = value;
+                                            break;
+                                        case "Quality":
+                                            item.Quality = value;
+                                            break;
+                                        case "Type":
+                                            item.Type = value;
+                                            break;
+                                    }
+                                }
+                            }
+
+                            Debug.WriteLine($"ParseTradingInventoryResponse: Parsed item: {item}");
+                            items.Add(item);
+                        }
+                    }
+
+                    Debug.WriteLine($"ParseTradingInventoryResponse: Successfully parsed {items.Count} inventory items");
+                }
+                else
+                {
+                    Debug.WriteLine("ParseTradingInventoryResponse: Missing required properties in response");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"ParseTradingInventoryResponse: Error parsing response: {ex.Message}");
+                Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+            }
+
+            return items;
+        }
+
+
+
+        private async Task GetWebSession()
+        {
+            try
+            {
+                Debug.WriteLine("=== GetWebSession: Initializing session with auth tokens ===");
+
+                if (!_isLoggedIn || _steamId == null)
+                {
+                    Debug.WriteLine("GetWebSession: Not logged in or Steam ID is null");
+                    return;
+                }
+
+                // Initialize cookie container
+                _steamCookies = new CookieContainer();
+                var steamId64 = _steamId.ConvertToUInt64();
+
+                // Generate a new session ID
+                _steamSessionId = Guid.NewGuid().ToString("N");
+                Debug.WriteLine($"GetWebSession: Created session ID: {_steamSessionId}");
+
+                // Add required cookies - the key to making this work
+                _steamCookies.Add(new Cookie("sessionid", _steamSessionId, "/", ".steamcommunity.com"));
+
+                // This is the critical part - we need to add the authentication token we have from login
+                if (!string.IsNullOrEmpty(_sessionKey))
+                {
+                    Debug.WriteLine("GetWebSession: Using existing session key as auth token");
+                    string authToken = Uri.EscapeDataString(_sessionKey);
+                    _steamCookies.Add(new Cookie("steamLoginSecure", $"{steamId64}%7C%7C{authToken}", "/", ".steamcommunity.com"));
+                }
+                else
+                {
+                    Debug.WriteLine("GetWebSession: No session key available, adding basic identity cookie");
+                    _steamCookies.Add(new Cookie("steamLoginSecure", $"{steamId64}%7C%7C", "/", ".steamcommunity.com"));
+                }
+
+                // Test authentication
+                Debug.WriteLine("GetWebSession: Testing authentication with cookies...");
+                using (var handler = new HttpClientHandler { CookieContainer = _steamCookies })
+                using (var httpClient = new HttpClient(handler))
+                {
+                    httpClient.DefaultRequestHeaders.Add("User-Agent",
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
+
+                    var testResponse = await httpClient.GetAsync($"https://steamcommunity.com/profiles/{steamId64}/");
+                    Debug.WriteLine($"GetWebSession: Auth test status: {testResponse.StatusCode}");
+
+                    string content = await testResponse.Content.ReadAsStringAsync();
+                    bool isLoggedIn = content.Contains($"g_steamID = \"{steamId64}\"");
+                    Debug.WriteLine($"GetWebSession: Authenticated: {isLoggedIn}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"=== ERROR in GetWebSession: {ex.Message} ===");
+                Debug.WriteLine($"Exception type: {ex.GetType().Name}");
+                Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+            }
+        }
+
+
+
+
+
+        public async Task<IEnumerable<Models.InventoryItem>> GetOwnInventoryAsync(uint appId = 730, uint contextId = 2)
+        {
+            Debug.WriteLine("=== GetOwnInventoryAsync: Using own inventory endpoint ===");
+
+            if (!_isLoggedIn || _steamId == null)
+            {
+                Debug.WriteLine("GetOwnInventoryAsync: Not logged in or Steam ID is null");
+                return new List<Models.InventoryItem>();
+            }
+
+            if (_steamCookies == null)
+            {
+                Debug.WriteLine("GetOwnInventoryAsync: Web session not available - requesting now");
+                await GetWebSession();
+            }
+
+            try
+            {
+                // Convert SteamID to 64-bit format
+                var steamId64 = _steamId.ConvertToUInt64();
+                Debug.WriteLine($"GetOwnInventoryAsync: Using Steam ID: {steamId64}");
+
+                using (var handler = new HttpClientHandler { CookieContainer = _steamCookies })
+                using (var httpClient = new HttpClient(handler))
+                {
+                    // Add necessary headers
+                    httpClient.DefaultRequestHeaders.Add("User-Agent",
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
+
+                    // Use personal inventory JSON endpoint which shows all items
+                    var url = $"https://steamcommunity.com/profiles/{steamId64}/inventory/json/{appId}/{contextId}?trading=1";
+                    Debug.WriteLine($"GetOwnInventoryAsync: Requesting URL: {url}");
+
+                    var response = await httpClient.GetStringAsync(url);
+                    Debug.WriteLine("GetOwnInventoryAsync: HTTP request successful");
+
+                    // You'll need to implement ParseOwnInventoryResponse for this format
+
+                    //return ParseOwnInventoryResponse(response);
+                    return null;        //##############################################################################PRIVRMENO
+
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"=== ERROR in GetOwnInventoryAsync: {ex.Message} ===");
+                Debug.WriteLine($"Exception type: {ex.GetType().Name}");
+                Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+
+                return await GetInventoryAsync(appId, contextId);
+            }
+        }
+
+
+
+        private IEnumerable<Models.InventoryItem> ParseOwnInventoryResponse(string jsonResponse)
+        {
+            Debug.WriteLine("ParseOwnInventoryResponse: Parsing Own Inventory response");
+            var items = new List<Models.InventoryItem>();
+
+            try
+            {
+                // Parse the JSON response
+                var responseObj = JsonSerializer.Deserialize<JsonElement>(jsonResponse);
+
+                // Check if the response was successful
+                if (responseObj.TryGetProperty("success", out var successProp) &&
+                    (successProp.ValueKind == JsonValueKind.True ||
+                    (successProp.ValueKind == JsonValueKind.Number && successProp.GetInt32() == 1)))
+                {
+                    Debug.WriteLine("ParseOwnInventoryResponse: Response indicates success");
+
+                    // Extract inventory data from the rgInventory and rgDescriptions properties
+                    if (responseObj.TryGetProperty("rgInventory", out var inventoryProp) &&
+                        responseObj.TryGetProperty("rgDescriptions", out var descriptionsProp))
+                    {
+                        Debug.WriteLine("ParseOwnInventoryResponse: Found inventory and descriptions");
+
+                        var inventoryItems = inventoryProp.EnumerateObject().ToList();
+                        var descriptions = descriptionsProp.EnumerateObject().ToList();
+
+                        foreach (var invItem in inventoryItems)
+                        {
+                            var itemObj = invItem.Value;
+                            string assetId = itemObj.GetProperty("id").GetString();
+                            string classId = itemObj.GetProperty("classid").GetString();
+                            string instanceId = itemObj.GetProperty("instanceid").GetString();
+
+                            // Find matching description
+                            var descKey = $"{classId}_{instanceId}";
+                            var matchingDesc = descriptions.FirstOrDefault(d => d.Name == descKey);
+
+                            if (matchingDesc.Value.ValueKind != JsonValueKind.Undefined)
+                            {
+                                var descObj = matchingDesc.Value;
+                                var item = new Models.InventoryItem
+                                {
+                                    AssetId = assetId,
+                                    Name = descObj.TryGetProperty("name", out var nameProp) ?
+                                        nameProp.GetString() : "Unknown",
+                                    MarketHashName = descObj.TryGetProperty("market_hash_name", out var hashNameProp) ?
+                                        hashNameProp.GetString() : "Unknown",
+                                    IconUrl = descObj.TryGetProperty("icon_url", out var iconUrlProp) ?
+                                        $"https://steamcommunity-a.akamaihd.net/economy/image/{iconUrlProp.GetString()}" : null,
+                                    // For now, set default market value
+                                    MarketValue = 0.0M
+                                };
+
+                                // Parse tags for rarity, quality, etc.
+                                if (descObj.TryGetProperty("tags", out var tagsProp))
+                                {
+                                    foreach (var tag in tagsProp.EnumerateArray())
+                                    {
+                                        string category = tag.GetProperty("category").GetString();
+                                        string value = tag.GetProperty("localized_tag_name").GetString();
+
+                                        switch (category)
+                                        {
+                                            case "Rarity":
+                                                item.Rarity = value;
+                                                break;
+                                            case "Quality":
+                                                item.Quality = value;
+                                                break;
+                                            case "Type":
+                                                item.Type = value;
+                                                break;
+                                        }
+                                    }
+                                }
+
+                                Debug.WriteLine($"ParseOwnInventoryResponse: Parsed item: {item}");
+                                items.Add(item);
+                            }
+                        }
+
+                        Debug.WriteLine($"ParseOwnInventoryResponse: Successfully parsed {items.Count} inventory items");
+                    }
+                }
+                else
+                {
+                    Debug.WriteLine("ParseOwnInventoryResponse: Response indicates failure");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"ParseOwnInventoryResponse: Error parsing response: {ex.Message}");
+                Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+            }
+
+            return items;
+        }
 
 
 
