@@ -7,10 +7,15 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
+using System.Collections.ObjectModel;
+using SteamInventoryAIR.Models;
+
 namespace SteamInventoryAIR.ViewModels
 {
     public class MainViewModel : BaseViewModel
     {
+        private readonly ISteamAuthService _authService;
+
         // Properties for inventory information
         private string _inventoryValue;
         public string InventoryValue
@@ -48,6 +53,29 @@ namespace SteamInventoryAIR.ViewModels
             set => SetProperty(ref _isValueGraphSelected, value);
         }
 
+
+        private ObservableCollection<InventoryItem> _inventoryItems;
+        public ObservableCollection<InventoryItem> InventoryItems
+        {
+            get => _inventoryItems;
+            set => SetProperty(ref _inventoryItems, value);
+        }
+
+        private bool _isLoadingInventory;
+        public bool IsLoadingInventory
+        {
+            get => _isLoadingInventory;
+            set => SetProperty(ref _isLoadingInventory, value);
+        }
+
+        private string _inventoryStatus;
+        public string InventoryStatus
+        {
+            get => _inventoryStatus;
+            set => SetProperty(ref _inventoryStatus, value);
+        }
+
+
         // Commands for tab navigation
         public ICommand SelectHomeTabCommand { get; }
         public ICommand SelectListTabCommand { get; }
@@ -60,6 +88,12 @@ namespace SteamInventoryAIR.ViewModels
         {
             Title = "Steam Inventory";
             Debug.WriteLine("MainViewModel initialized");
+
+            // Store the auth service
+            _authService = authService;
+
+            // Initialize collections
+            InventoryItems = new ObservableCollection<InventoryItem>();
 
             // Initialize with sample data
             InventoryValue = "1337,64 €";
@@ -76,6 +110,8 @@ namespace SteamInventoryAIR.ViewModels
             {
                 Debug.WriteLine("List tab selected");
                 SelectedTabIndex = 1;
+                // Load inventory when the tab is selected
+                _ = LoadInventoryAsync();
             });
 
             SelectMonitoringTabCommand = new Command(() =>
@@ -121,5 +157,76 @@ namespace SteamInventoryAIR.ViewModels
                 Debug.WriteLine($"Error loading persona name: {ex.Message}");
             }
         }
+
+
+        public async Task LoadInventoryAsync()
+        {
+            if (_authService == null)
+            {
+                Debug.WriteLine("LoadInventoryAsync: Auth service is not available");
+                InventoryStatus = "Error: Auth service not available";
+                return;
+            }
+
+            try
+            {
+                Debug.WriteLine("LoadInventoryAsync: Starting inventory load");
+                IsLoadingInventory = true;
+                InventoryStatus = "Loading inventory...";
+
+                // Get inventory items from auth service
+                var items = await _authService.GetInventoryAsync();
+
+                Debug.WriteLine($"LoadInventoryAsync: Retrieved {items?.Count() ?? 0} items");
+
+                // Update the ObservableCollection
+                InventoryItems.Clear();
+                if (items != null)
+                {
+                    foreach (var item in items)
+                    {
+                        InventoryItems.Add(item);
+                    }
+                }
+
+                // Update inventory value and count
+                if (items?.Any() == true)
+                {
+                    // If we have market values, use them. Otherwise use placeholder values.
+                    if (items.Any(i => i.MarketValue > 0))
+                    {
+                        InventoryValue = $"{items.Sum(i => i.MarketValue):N2} €";
+                    }
+                    InventoryItemQuantity = items.Count().ToString();
+                    InventoryStatus = $"Loaded {items.Count()} items";
+
+                    // Debug output for all items
+                    foreach (var item in items)
+                    {
+                        Debug.WriteLine($"Item: {item}");
+                    }
+                }
+                else
+                {
+                    InventoryValue = "0.00 €";
+                    InventoryItemQuantity = "0";
+                    InventoryStatus = items?.Any() == false ? "No items found" : "Failed to load inventory";
+                }
+
+                Debug.WriteLine($"LoadInventoryAsync: Updated inventory values: {InventoryValue}, {InventoryItemQuantity}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"LoadInventoryAsync: Error: {ex.Message}");
+                InventoryStatus = $"Error: {ex.Message}";
+            }
+            finally
+            {
+                IsLoadingInventory = false;
+            }
+        }
+
+
+
     }
 }

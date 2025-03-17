@@ -92,26 +92,39 @@
             </StackLayout>
 
             <!-- Inventory List Tab Content -->
-            <Grid x:Name="ListTabContent" IsVisible="{Binding SelectedTabIndex, Converter={StaticResource IntEqualConverter}, ConverterParameter=1}" Margin="15,10,15,0" RowDefinitions="Auto, *">
+            <Grid x:Name="ListTabContent" IsVisible="{Binding SelectedTabIndex, Converter={StaticResource IntEqualConverter}, ConverterParameter=1}" Margin="15,10,15,0" RowDefinitions="Auto, Auto, *">
                 <!-- Search and Filter Controls -->
                 <Grid Grid.Row="0" ColumnDefinitions="*, Auto, Auto" Margin="0,0,0,10">
                     <SearchBar x:Name="TB_Search" Grid.Column="0" Placeholder="Search" 
-                              BackgroundColor="#2A2E35" TextColor="White" 
-                              PlaceholderColor="#AAAAAA"/>
+                  BackgroundColor="#2A2E35" TextColor="White" 
+                  PlaceholderColor="#AAAAAA"/>
 
                     <Button x:Name="BTN_ListSearch" Grid.Column="1" Text="🔍" 
-                            BackgroundColor="#2A2E35" TextColor="White" 
-                            WidthRequest="50" HeightRequest="50" Margin="10,0,0,0"/>
+                BackgroundColor="#2A2E35" TextColor="White" 
+                WidthRequest="50" HeightRequest="50" Margin="10,0,0,0"/>
 
                     <Button x:Name="BTN_ListFilter" Grid.Column="2" Text="🛠️" 
-                            BackgroundColor="#2A2E35" TextColor="White" 
-                            WidthRequest="50" HeightRequest="50" Margin="10,0,0,0"/>
+                BackgroundColor="#2A2E35" TextColor="White" 
+                WidthRequest="50" HeightRequest="50" Margin="10,0,0,0"/>
                 </Grid>
 
+                <!-- Status Message -->
+                <Label Grid.Row="1" Text="{Binding InventoryStatus}" 
+                       TextColor="White" HorizontalOptions="Center"
+                       VerticalOptions="Center" Margin="0,5,0,10" 
+                       FontSize="16"/>
 
                 <!-- Replacing deprecated VerticalOptions="FillAndExpand" pattern -->
-                <Grid Grid.Row="1" RowDefinitions="*">
-                    <ScrollView Grid.Row="0">
+                <Grid Grid.Row="2" RowDefinitions="*">
+                    <!-- Loading Indicator -->
+                    <ActivityIndicator IsRunning="{Binding IsLoadingInventory}" 
+                                      IsVisible="{Binding IsLoadingInventory}"
+                                      Color="Red" 
+                                      VerticalOptions="Center" 
+                                      HorizontalOptions="Center"
+                                      HeightRequest="50" WidthRequest="50"/>
+
+                    <ScrollView>
                         <VerticalStackLayout Spacing="10">
                             <!-- Inventory Item Template -->
                             <Border StrokeThickness="1" Stroke="Gray" StrokeShape="RoundRectangle 5">
@@ -121,21 +134,21 @@
                                            VerticalOptions="Center"/>
 
                                     <StackLayout Grid.Column="1" HorizontalOptions="Center" 
-                                                 VerticalOptions="Center" Spacing="5">
+                                     VerticalOptions="Center" Spacing="5">
                                         <Label Text="Item #1 Name" TextColor="White" 
-                                               FontSize="18" HorizontalTextAlignment="Center"/>
+                                   FontSize="18" HorizontalTextAlignment="Center"/>
 
                                         <Grid ColumnDefinitions="*, *" HorizontalOptions="Center">
                                             <Label Grid.Column="0" Text="Quantity: 5" TextColor="Gray" 
-                                                   FontSize="14" Margin="0,0,10,0"/>
+                                       FontSize="14" Margin="0,0,10,0"/>
                                             <Label Grid.Column="1" Text="Price: 15.50 €" TextColor="Gray" 
-                                                   FontSize="14" Margin="10,0,0,0"/>
+                                       FontSize="14" Margin="10,0,0,0"/>
                                         </Grid>
                                     </StackLayout>
 
                                     <Button Grid.Column="2" Text="⬇" FontSize="20" BackgroundColor="#2A2E35" 
-                                            TextColor="White" WidthRequest="50" 
-                                            VerticalOptions="Center"/>
+                                TextColor="White" WidthRequest="50" 
+                                VerticalOptions="Center"/>
                                 </Grid>
                             </Border>
 
@@ -143,31 +156,32 @@
                             <Border StrokeThickness="1" Stroke="Gray" StrokeShape="RoundRectangle 5">
                                 <Grid ColumnDefinitions="Auto, *, Auto" Padding="10" HeightRequest="80">
                                     <Image Grid.Column="0" Source="dotnet_bot.png" 
-                                           HeightRequest="100" WidthRequest="100" 
-                                           VerticalOptions="Center"/>
+                               HeightRequest="100" WidthRequest="100" 
+                               VerticalOptions="Center"/>
 
                                     <StackLayout Grid.Column="1" HorizontalOptions="Center" 
-                                                 VerticalOptions="Center" Spacing="5">
+                                     VerticalOptions="Center" Spacing="5">
                                         <Label Text="Item #2 Name" TextColor="White" 
-                                               FontSize="18" HorizontalTextAlignment="Center"/>
+                                   FontSize="18" HorizontalTextAlignment="Center"/>
 
                                         <Grid ColumnDefinitions="*, *" HorizontalOptions="Center">
                                             <Label Grid.Column="0" Text="Quantity: 3" TextColor="Gray" 
-                                                   FontSize="14" Margin="0,0,10,0"/>
+                                       FontSize="14" Margin="0,0,10,0"/>
                                             <Label Grid.Column="1" Text="Price: 25.75 €" TextColor="Gray" 
-                                                   FontSize="14" Margin="10,0,0,0"/>
+                                       FontSize="14" Margin="10,0,0,0"/>
                                         </Grid>
                                     </StackLayout>
 
                                     <Button Grid.Column="2" Text="⬇️" FontSize="20" BackgroundColor="#2A2E35" 
-                                            TextColor="White" WidthRequest="50" 
-                                            VerticalOptions="Center"/>
+                                TextColor="White" WidthRequest="50" 
+                                VerticalOptions="Center"/>
                                 </Grid>
                             </Border>
                         </VerticalStackLayout>
                     </ScrollView>
                 </Grid>
             </Grid>
+
 
             <!-- Monitoring Tab Content -->
             <Grid x:Name="MonitoringTabContent" IsVisible="{Binding SelectedTabIndex, Converter={StaticResource IntEqualConverter}, ConverterParameter=2}" Margin="15,10,15,0" RowDefinitions="Auto, Auto, *">

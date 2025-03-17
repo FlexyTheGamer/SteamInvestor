@@ -12,6 +12,9 @@ using SteamKit2.Authentication;
 using SteamKit2.Internal;
 using static SteamKit2.Internal.CMsgRemoteClientBroadcastStatus;
 
+using SteamInventoryAIR.Models;
+using System.Net.Http;
+
 namespace SteamInventoryAIR.Services
 {
     public  class SteamAuthService : ISteamAuthService
@@ -740,6 +743,178 @@ namespace SteamInventoryAIR.Services
             _steamClient.Connect();
 
             return await _loginTcs.Task;
+        }
+
+
+
+        // Add this method to SteamAuthService class
+        public async Task<IEnumerable<Models.InventoryItem>> GetInventoryAsync(uint appId = 730, uint contextId = 2)
+        {
+            Debug.WriteLine($"=== GetInventoryAsync: Retrieving inventory for appId={appId}, contextId={contextId} ===");
+
+            if (!_isLoggedIn || _steamId == null)
+            {
+                Debug.WriteLine("GetInventoryAsync: Not logged in or Steam ID is null");
+                return new List<InventoryItem>();
+            }
+
+            const int maxRetries = 3;
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
+            {
+                try
+                {
+                    if (attempt > 1)
+                    {
+                        Debug.WriteLine($"GetInventoryAsync: Retry attempt {attempt}/{maxRetries}");
+                        await Task.Delay(1000 * attempt); // Exponential backoff
+                    }
+
+                    Debug.WriteLine($"GetInventoryAsync: Making HTTP request for Steam ID {_steamId}");
+
+                    using (var httpClient = new HttpClient())
+                    {
+                        // Add user agent header
+                        httpClient.DefaultRequestHeaders.Add("User-Agent",
+                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
+
+                        // Convert SteamID to 64-bit format
+                        var steamId64 = _steamId.ConvertToUInt64();
+                        var url = $"https://steamcommunity.com/inventory/{steamId64}/{appId}/{contextId}?count=5000";
+
+                        Debug.WriteLine($"GetInventoryAsync: Requesting URL: {url}");
+                        var response = await httpClient.GetStringAsync(url);
+                        Debug.WriteLine("GetInventoryAsync: HTTP request successful");
+
+                        return ParseInventoryHttpResponse(response);
+                    }
+                }
+                catch (Exception ex) when (attempt < maxRetries)
+                {
+                    // Log the error but continue with retry
+                    Debug.WriteLine($"GetInventoryAsync: Attempt {attempt} failed: {ex.Message}. Retrying...");
+                }
+                catch (HttpRequestException httpEx)
+                {
+                    // Final attempt with HTTP error - log details and return empty list
+                    Debug.WriteLine($"=== ERROR in GetInventoryAsync: {httpEx.Message} ===");
+                    Debug.WriteLine($"Status code: {(httpEx.StatusCode.HasValue ? (int)httpEx.StatusCode.Value : "unknown")}");
+                    Debug.WriteLine($"Exception type: {httpEx.GetType().Name}");
+                    Debug.WriteLine($"Stack trace: {httpEx.StackTrace}");
+                    return new List<InventoryItem>();
+                }
+                catch (Exception ex)
+                {
+                    // Final attempt with generic error
+                    Debug.WriteLine($"=== ERROR in GetInventoryAsync: {ex.Message} ===");
+                    Debug.WriteLine($"Exception type: {ex.GetType().Name}");
+                    Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+                    return new List<InventoryItem>();
+                }
+            }
+
+            // We shouldn't reach here unless all retries failed but were caught by the when clause
+            Debug.WriteLine("GetInventoryAsync: All retry attempts failed");
+            return new List<InventoryItem>();
+        }
+
+        private IEnumerable<Models.InventoryItem> ParseInventoryHttpResponse(string jsonResponse)
+        {
+            Debug.WriteLine("ParseInventoryHttpResponse: Parsing HTTP response");
+
+            var items = new List<Models.InventoryItem>();
+
+            try
+            {
+                // Parse the JSON response
+                var responseObj = JsonSerializer.Deserialize<JsonElement>(jsonResponse);
+
+                if (responseObj.TryGetProperty("success", out var successProp) &&
+                                                ((successProp.ValueKind == JsonValueKind.True) ||
+                                                (successProp.ValueKind == JsonValueKind.Number && successProp.GetInt32() == 1)))
+                {
+                    Debug.WriteLine("ParseInventoryHttpResponse: Response indicates success");
+
+                    if (responseObj.TryGetProperty("assets", out var assetsProp) &&
+                        responseObj.TryGetProperty("descriptions", out var descriptionsProp))
+                    {
+                        Debug.WriteLine($"ParseInventoryHttpResponse: Found {assetsProp.GetArrayLength()} assets and {descriptionsProp.GetArrayLength()} descriptions");
+
+                        var assets = assetsProp.EnumerateArray().ToList();
+                        var descriptions = descriptionsProp.EnumerateArray().ToList();
+
+                        foreach (var asset in assets)
+                        {
+                            string assetId = asset.GetProperty("assetid").GetString();
+                            string classId = asset.GetProperty("classid").GetString();
+                            string instanceId = asset.GetProperty("instanceid").GetString();
+
+                            // Find matching description
+                            var description = descriptions.FirstOrDefault(d =>
+                                d.GetProperty("classid").GetString() == classId &&
+                                d.GetProperty("instanceid").GetString() == instanceId);
+
+                            if (description.ValueKind != JsonValueKind.Undefined)
+                            {
+                                var item = new Models.InventoryItem
+                                {
+                                    AssetId = assetId,
+                                    Name = description.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : "Unknown",
+                                    MarketHashName = description.TryGetProperty("market_hash_name", out var hashNameProp) ? hashNameProp.GetString() : "Unknown",
+                                    IconUrl = description.TryGetProperty("icon_url", out var iconUrlProp) ?
+                                        $"https://steamcommunity-a.akamaihd.net/economy/image/{iconUrlProp.GetString()}" : null,
+                                    // For now, we'll set a default market value
+                                    MarketValue = 0.0M
+                                };
+
+                                // Parse tags for rarity, quality, etc.
+                                if (description.TryGetProperty("tags", out var tagsProp))
+                                {
+                                    foreach (var tag in tagsProp.EnumerateArray())
+                                    {
+                                        string category = tag.GetProperty("category").GetString();
+                                        string value = tag.GetProperty("localized_tag_name").GetString();
+
+                                        switch (category)
+                                        {
+                                            case "Rarity":
+                                                item.Rarity = value;
+                                                break;
+                                            case "Quality":
+                                                item.Quality = value;
+                                                break;
+                                            case "Type":
+                                                item.Type = value;
+                                                break;
+                                        }
+                                    }
+                                }
+
+                                // Debug output for item
+                                Debug.WriteLine($"ParseInventoryHttpResponse: Parsed item: {item}");
+
+                                items.Add(item);
+                            }
+                        }
+
+                        Debug.WriteLine($"ParseInventoryHttpResponse: Successfully parsed {items.Count} inventory items");
+                    }
+                    else
+                    {
+                        Debug.WriteLine("ParseInventoryHttpResponse: Missing assets or descriptions in response");
+                    }
+                }
+                else
+                {
+                    Debug.WriteLine("ParseInventoryHttpResponse: Response indicates failure");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"ParseInventoryHttpResponse: Error parsing response: {ex.Message}");
+                Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+            }
+
+            return items;
         }
     }
 }

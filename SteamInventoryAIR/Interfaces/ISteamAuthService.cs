@@ -19,5 +19,9 @@ namespace SteamInventoryAIR.Interfaces
 
         Task<bool> SubmitTwoFactorCodeAsync(string twoFactorCode);
 
+
+        Task<IEnumerable<Models.InventoryItem>> GetInventoryAsync(uint appId = 730, uint contextId = 2);
+
+
     }
 }
