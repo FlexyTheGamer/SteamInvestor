@@ -170,14 +170,14 @@ namespace SteamInventoryAIR.ViewModels
 
             try
             {
-                Debug.WriteLine("LoadInventoryAsync: Starting inventory load");
+                Debug.WriteLine("LoadInventoryAsync: Starting authenticated inventory load");
                 IsLoadingInventory = true;
                 InventoryStatus = "Loading inventory...";
 
-                // Get inventory items from auth service
-                var items = await _authService.GetInventoryAsync();
 
-                Debug.WriteLine($"LoadInventoryAsync: Retrieved {items?.Count() ?? 0} items");
+                var items = await _authService.GetInventoryViaWebAPIAsync();
+
+                Debug.WriteLine($"LoadInventoryAsync: Retrieved {items?.Count() ?? 0} items via authenticated session");
 
                 // Update the ObservableCollection
                 InventoryItems.Clear();
@@ -225,6 +225,7 @@ namespace SteamInventoryAIR.ViewModels
                 IsLoadingInventory = false;
             }
         }
+
 
 
 

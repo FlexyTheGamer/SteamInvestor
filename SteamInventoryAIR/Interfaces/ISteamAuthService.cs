@@ -22,6 +22,11 @@ namespace SteamInventoryAIR.Interfaces
 
         Task<IEnumerable<Models.InventoryItem>> GetInventoryAsync(uint appId = 730, uint contextId = 2);
 
+        //Task<IEnumerable<Models.InventoryItem>> GetCompleteInventoryAsync(uint appId = 730, uint contextId = 2);
+
+        Task<IEnumerable<Models.InventoryItem>> GetInventoryViaWebAPIAsync(uint appId = 730, uint contextId = 2);
+
+
 
     }
 }

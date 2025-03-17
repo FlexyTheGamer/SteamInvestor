@@ -15,6 +15,9 @@ using static SteamKit2.Internal.CMsgRemoteClientBroadcastStatus;
 using SteamInventoryAIR.Models;
 using System.Net.Http;
 
+using SteamKit2.GC; // Add this line to include the GameCoordinator namespace
+using SteamKit2.GC.CSGO.Internal; // Add this line to include the CSGO namespace
+
 namespace SteamInventoryAIR.Services
 {
     public  class SteamAuthService : ISteamAuthService
@@ -747,7 +750,6 @@ namespace SteamInventoryAIR.Services
 
 
 
-        // Add this method to SteamAuthService class
         public async Task<IEnumerable<Models.InventoryItem>> GetInventoryAsync(uint appId = 730, uint contextId = 2)
         {
             Debug.WriteLine($"=== GetInventoryAsync: Retrieving inventory for appId={appId}, contextId={contextId} ===");
@@ -916,5 +918,67 @@ namespace SteamInventoryAIR.Services
 
             return items;
         }
+
+
+
+
+        // Add this method to SteamAuthService.cs
+        public async Task<IEnumerable<Models.InventoryItem>> GetInventoryViaWebAPIAsync(uint appId = 730, uint contextId = 2)
+        {
+            Debug.WriteLine("=== GetInventoryViaWebAPIAsync: Using authenticated WebAPI ===");
+
+            if (!_isLoggedIn || _steamId == null)
+            {
+                Debug.WriteLine("GetInventoryViaWebAPIAsync: Not logged in or Steam ID is null");
+                return new List<Models.InventoryItem>();
+            }
+
+            try
+            {
+                // Get SteamUser for authentication
+                var steamUser = _steamClient.GetHandler<SteamUser>();
+                if (steamUser == null)
+                {
+                    Debug.WriteLine("GetInventoryViaWebAPIAsync: Unable to get SteamUser handler");
+                    return await GetInventoryAsync(appId, contextId); // Fall back to public API
+                }
+
+                // Get Steam ID in proper format
+                var steamId64 = _steamId.ConvertToUInt64();
+                Debug.WriteLine($"GetInventoryViaWebAPIAsync: Using Steam ID: {steamId64}");
+
+                // Create HTTP client with auth cookies
+                using (var handler = new HttpClientHandler { UseCookies = true })
+                using (var httpClient = new HttpClient(handler))
+                {
+                    // Add necessary headers
+                    httpClient.DefaultRequestHeaders.Add("User-Agent",
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
+
+                    // Use the newer endpoint format from search result [13]
+                    var url = $"https://steamcommunity.com/inventory/{steamId64}/{appId}/{contextId}?count=5000";
+                    Debug.WriteLine($"GetInventoryViaWebAPIAsync: Requesting URL: {url}");
+
+                    var response = await httpClient.GetStringAsync(url);
+                    Debug.WriteLine("GetInventoryViaWebAPIAsync: HTTP request successful");
+
+                    // Use existing method to parse the response
+                    return ParseInventoryHttpResponse(response);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"=== ERROR in GetInventoryViaWebAPIAsync: {ex.Message} ===");
+                Debug.WriteLine($"Exception type: {ex.GetType().Name}");
+                Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+
+                // Fall back to the public API method
+                return await GetInventoryAsync(appId, contextId);
+            }
+        }
+
+
+
+
     }
 }
